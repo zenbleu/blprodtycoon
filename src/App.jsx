@@ -20,6 +20,7 @@ import ModalSystem from './components/ModalSystem.jsx'
 import Confetti from './components/Confetti.jsx'
 import AwardsCeremony from './components/AwardsCeremony.jsx'
 import { setSfxEnabled } from './game/audio.js'
+import { buildBalanceReport } from './game/debug.js'
 
 function GameApp() {
   const { state } = useGame()
@@ -39,6 +40,19 @@ function GameApp() {
     // SFX
     setSfxEnabled(state.settings?.sfxOn !== false)
   }, [state.settings?.scanlines, state.settings?.animSpeed, state.settings?.sfxOn])
+
+  // Deliberately developer-only: this is a console inspection hook, not a
+  // player-facing feature or a production telemetry path.
+  useEffect(() => {
+    if (!import.meta.env.DEV || typeof window === 'undefined') return undefined
+    window.__BL_TYCOON_DEBUG__ = {
+      getState: () => state,
+      getReport: () => buildBalanceReport(state),
+    }
+    return () => {
+      if (window.__BL_TYCOON_DEBUG__) delete window.__BL_TYCOON_DEBUG__
+    }
+  }, [state])
 
   // ── Lock body scroll when a modal is open ─────────────────────────────────
   // Must be declared BEFORE the early return so hook count is stable across renders
