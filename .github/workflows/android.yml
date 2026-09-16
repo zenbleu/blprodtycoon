@@ -1,0 +1,103 @@
+name: Android APK (Capacitor) Build
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Clean previous build artifacts
+        run: |
+          rm -rf android/app/build android/build android/.gradle
+          rm -rf dist
+
+      - name: Install Node dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build web assets (Vite → dist/)
+        run: pnpm run build
+
+      - name: Add Capacitor Android platform (skips if already exists)
+        run: npx cap add android || echo "Android platform already present, continuing"
+
+      - name: Install ImageMagick
+        run: sudo apt-get install -y imagemagick
+
+      - name: Download app icon
+        run: curl -L "https://i.imgur.com/xHSHlIM.jpeg" -o /tmp/icon_source.jpg
+
+      - name: Sync Capacitor (copies web build → Android project)
+        run: npx cap sync android
+
+      - name: Generate Android launcher icons
+        run: |
+          rm -rf android/app/src/main/res/mipmap-anydpi-v26
+          for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            case $density in
+              mdpi)    size=48  ;;
+              hdpi)    size=72  ;;
+              xhdpi)   size=96  ;;
+              xxhdpi)  size=144 ;;
+              xxxhdpi) size=192 ;;
+            esac
+            dir="android/app/src/main/res/mipmap-${density}"
+            mkdir -p "$dir"
+            convert /tmp/icon_source.jpg -resize ${size}x${size} "$dir/ic_launcher.png"
+            convert /tmp/icon_source.jpg -resize ${size}x${size} "$dir/ic_launcher_round.png"
+          done
+
+      - name: Build Android debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon --warning-mode=none
+
+      - name: Verify APK was produced
+        run: |
+          ls -la android/app/build/outputs/apk/debug/
+          if [ ! -f android/app/build/outputs/apk/debug/app-debug.apk ]; then
+            echo "::error::APK not found — build failed"
+            exit 1
+          fi
+
+      - name: Upload APK as downloadable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BL-Production-Tycoon-debug-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+          overwrite: true
+
+          
