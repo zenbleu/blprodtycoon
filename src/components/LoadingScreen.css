@@ -1,0 +1,188 @@
+/* ============================================================
+   LoadingScreen.css — BL Production Tycoon
+   ============================================================ */
+
+/* ── Root container ─────────────────────────────────────────── */
+.ls-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: clamp(6vh, 8vh, 60px);
+  overflow: hidden;
+  transition: opacity 0.65s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  background: #180828;
+}
+
+.ls-exit {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+/* ── Background image ───────────────────────────────────────── */
+.ls-bg-img {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+/* Semi-transparent overlay so the HUD is always readable */
+.ls-bg-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    to bottom,
+    rgba(24, 8, 40, 0.15) 0%,
+    rgba(24, 8, 40, 0.30) 55%,
+    rgba(24, 8, 40, 0.78) 100%
+  );
+  pointer-events: none;
+}
+
+/* ── Ambient canvas ─────────────────────────────────────────── */
+.ls-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* ── HUD (message + progress bar) ──────────────────────────── */
+.ls-hud {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: min(88vw, 400px);
+  z-index: 6;
+  position: relative;
+}
+
+/* Rotating message */
+.ls-msg {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(6px, 1.4vw, 9px);
+  color: #FFE8F4;
+  text-align: center;
+  letter-spacing: 1px;
+  line-height: 1.9;
+  min-height: 2.4em;
+  padding: 0 8px;
+  transition: opacity 0.38s ease, transform 0.38s ease;
+  text-shadow: 0 0 10px rgba(255, 107, 157, 0.55);
+}
+.ls-msg-in  { opacity: 1; transform: translateY(0);   }
+.ls-msg-out { opacity: 0; transform: translateY(7px); }
+
+/* Progress bar wrapper */
+.ls-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+}
+
+/* Heart cursor row — sits directly above the bar track */
+.ls-heart-row {
+  position: relative;
+  width: 100%;
+  height: 20px;
+}
+
+.ls-heart-cursor {
+  position: absolute;
+  bottom: 0;
+  transition: left 0.14s linear;
+  animation: heart-bounce 0.7s ease-in-out infinite;
+}
+
+@keyframes heart-bounce {
+  0%, 100% { transform: translateY(0);   }
+  50%       { transform: translateY(-4px); }
+}
+
+/* Bar track */
+.ls-bar-track {
+  width: 100%;
+  height: 22px;
+  background: #0D0518;
+  border: 3px solid #6B2060;
+  border-radius: 14px;
+  overflow: hidden;
+  position: relative;
+  box-shadow:
+    0 0 14px rgba(255, 107, 157, 0.22),
+    inset 0 2px 5px rgba(0, 0, 0, 0.7);
+}
+
+/* Pink fill */
+.ls-bar-fill {
+  height: 100%;
+  border-radius: 12px;
+  background: linear-gradient(
+    90deg,
+    #C0406A 0%,
+    #FF6B9D 45%,
+    #FFB3D1 70%,
+    #FF6B9D 100%
+  );
+  background-size: 200% 100%;
+  transition: width 0.14s linear;
+  position: relative;
+  box-shadow:
+    0 0 14px rgba(255, 107, 157, 0.75),
+    0 0 28px rgba(255, 107, 157, 0.35);
+  animation: bar-shimmer 2s linear infinite;
+}
+
+@keyframes bar-shimmer {
+  0%   { background-position: 0%   50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.ls-bar-glint {
+  position: absolute;
+  top: 3px; left: 8px; right: 8px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.32);
+  border-radius: 4px;
+  animation: glint-pulse 1.8s ease-in-out infinite;
+}
+@keyframes glint-pulse {
+  0%, 100% { opacity: 0.32; }
+  50%       { opacity: 0.60; }
+}
+
+/* Bar label */
+.ls-bar-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(7px, 1.4vw, 9px);
+  color: #FF6B9D;
+  letter-spacing: 2px;
+  text-shadow: 0 0 8px rgba(255, 107, 157, 0.65);
+}
+
+/* ── Reduced motion ─────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .ls-bar-fill,
+  .ls-bar-glint,
+  .ls-heart-cursor { animation: none !important; }
+  .ls-msg          { transition: none !important; }
+  .ls-root         { transition: none !important; }
+}
