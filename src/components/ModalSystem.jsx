@@ -212,6 +212,20 @@ function ProductionResultModal({ data, onClose }) {
           <Stat label="XP"       value={`+${ev.xpPerActor ?? 0}/actor`} color="var(--lav)" />
         </div>
 
+        {ev.resultBreakdown?.length > 0 && (
+          <div style={styles.breakdownSection}>
+            <div style={styles.breakdownTitle}>WHY THIS RESULT</div>
+            <div style={styles.breakdownGrid}>
+              {ev.resultBreakdown.map(item => (
+                <div key={item.id} style={styles.breakdownItem}>
+                  <span style={styles.breakdownLabel}>{item.label}</span>
+                  <strong style={{ ...styles.breakdownValue, color: toneColor(item.tone) }}>{item.value}</strong>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Details */}
         <div style={styles.detailRow}>
           <span style={{ color: 'var(--lav)' }}>Genre:</span> {prod.genre}
@@ -575,6 +589,17 @@ function delta(n) {
   return `${n >= 0 ? '+' : ''}${n}`
 }
 
+function toneColor(tone) {
+  return {
+    pink: 'var(--pink)',
+    gold: 'var(--gold)',
+    blue: 'var(--blue)',
+    green: 'var(--green)',
+    red: 'var(--red)',
+    gray: 'var(--lav)',
+  }[tone] ?? 'var(--white)'
+}
+
 const styles = {
   header: {
     display:        'flex',
@@ -652,6 +677,40 @@ const styles = {
     fontSize: 7,
     color:    'var(--white)',
     marginBottom: 12,
+  },
+  breakdownSection: {
+    background: 'var(--bg-inset)',
+    border: '2px solid var(--shadow)',
+    padding: 9,
+    margin: '8px 0 10px',
+  },
+  breakdownTitle: {
+    fontSize: 7,
+    color: 'var(--pink)',
+    letterSpacing: 1,
+    borderBottom: '1px solid var(--pink-dim)',
+    paddingBottom: 6,
+    marginBottom: 7,
+  },
+  breakdownGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 6,
+  },
+  breakdownItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 3,
+    minWidth: 0,
+  },
+  breakdownLabel: {
+    color: 'var(--lav)',
+    fontSize: 6,
+    lineHeight: 1.5,
+  },
+  breakdownValue: {
+    fontSize: 7,
+    lineHeight: 1.4,
   },
   closeBtn: {
     width:     '100%',

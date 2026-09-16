@@ -4,6 +4,7 @@
  */
 import React, { useRef, useState } from 'react'
 import { useGame, A, pushToast, INITIAL_STATE } from '../game/state.jsx'
+import { createSaveData, isSaveData } from '../game/save.js'
 import { SFX } from '../game/audio.js'
 
 
@@ -22,7 +23,7 @@ export default function Settings() {
   function handleExport() {
     SFX.confirm()
     try {
-      const json = JSON.stringify(state, null, 2)
+      const json = JSON.stringify(createSaveData(state), null, 2)
       const blob = new Blob([json], { type: 'application/json' })
       const url  = URL.createObjectURL(blob)
       const a    = document.createElement('a')
@@ -51,8 +52,8 @@ export default function Settings() {
     reader.onload = (ev) => {
       try {
         const save = JSON.parse(ev.target.result)
-        if (!save || typeof save !== 'object' || !save.week) {
-          pushToast(dispatch, 'Invalid save file.', 'red')
+        if (!isSaveData(save)) {
+          pushToast(dispatch, 'Invalid or newer save file.', 'red')
           return
         }
         dispatch({ type: A.LOAD_SAVE, saveData: save })

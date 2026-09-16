@@ -6,6 +6,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useGame, A } from '../game/state.jsx'
 import { initActor, ACTOR_DATA, initChemistry } from '../game/actors.js'
 import { initAudio, SFX } from '../game/audio.js'
+import { isSaveData } from '../game/save.js'
 
 export default function TitleScreen() {
   const { dispatch } = useGame()
@@ -38,6 +39,10 @@ export default function TitleScreen() {
       const raw = localStorage.getItem('bl_tycoon_save')
       if (!raw) return
       const save = JSON.parse(raw)
+      if (!isSaveData(save)) {
+        alert('Save data is invalid or from a newer version.')
+        return
+      }
       setFading(true)
       setTimeout(() => dispatch({ type: A.LOAD_SAVE, saveData: save }), 400)
     } catch {
