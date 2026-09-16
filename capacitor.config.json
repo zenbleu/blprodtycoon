@@ -1,0 +1,14 @@
+{
+  "appId": "com.blproductiontycoon.app",
+  "appName": "BL Production Tycoon",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "plugins": {
+    "StatusBar": {
+      "style": "dark"
+    },
+    "Keyboard": {
+      "resizeOnFullScreen": true
+    }
+  }
+}
