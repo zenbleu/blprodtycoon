@@ -26,7 +26,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          lfs: true
+          # The repository contains stale LFS pointer files whose objects are
+          # not present on GitHub. Do not make Pages checkout fail on them.
+          lfs: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
