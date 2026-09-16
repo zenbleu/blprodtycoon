@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'node:path'
 
-// Use a relative base so assets are loaded correctly when packaged for Capacitor/Android.
+// A relative base works for GitHub Pages project sites and Capacitor/Android.
 export default defineConfig({
   plugins: [react()],
   base: './',

@@ -6,7 +6,7 @@ A turn-based Boys' Love (BL) production management tycoon game built with React 
 - **Frontend**: React 18 + Vite 5
 - **Styling**: CSS custom properties (`/src/styles/theme.css`), Press Start 2P pixel font
 - **State**: React Context + useReducer with localStorage auto-save
-- **Deploy target**: GitHub Pages (`npm run deploy`)
+- **Deploy target**: GitHub Pages via `.github/workflows/deploy.yml`
 
 ## Project structure
 ```
@@ -19,10 +19,10 @@ A turn-based Boys' Love (BL) production management tycoon game built with React 
 
 ## How to run
 ```bash
-npm install
-npm run dev       # dev server on port 5000
-npm run build     # production build → /dist
-npm run deploy    # build + push to GitHub Pages
+pnpm install
+pnpm run dev      # dev server on port 5000
+pnpm run build    # production build → /dist
+pnpm test         # deterministic game-rule tests
 ```
 
 ## Mobile-first
@@ -36,8 +36,8 @@ Use as the functional reference for all game systems and formulas.
 Portraits are `.jpg` files at `/public/images/actor_01.jpg` through `actor_20.jpg`.
 Code references them via the `getPortraitUrl(id)` helper in `src/game/actors.js`.
 
-## GitHub Pages base
-`vite.config.js` sets `base: '/bl-production-tycoon/'`. Update if the repo name changes.
+## GitHub Pages
+`.github/workflows/deploy.yml` builds with pnpm and publishes `dist/` using the official Pages artifact/deploy actions. `vite.config.js` uses `base: './'`, which keeps assets compatible with both project-site Pages URLs and Capacitor/Android packaging.
 
 ## User preferences
 - Mobile-first, touch-friendly (thumb-sized buttons, no hover-only interactions)
