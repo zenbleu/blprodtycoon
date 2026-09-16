@@ -5,9 +5,11 @@
 import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react'
 import { generateRivals } from './ranking.js'
 import { initActor, ACTOR_DATA, initChemistry, startHoneymoon, HONEYMOON_NEW_RECRUIT_WEEKS } from './actors.js'
+import { SAVE_SCHEMA_VERSION, createSaveData, migrateSaveData } from './save.js'
 
 // ─── Initial State ────────────────────────────────────────────────────────────
 export const INITIAL_STATE = {
+  schemaVersion:  SAVE_SCHEMA_VERSION,
   started:       false,
   companyName:   'Studio Sakura',
   startYear:     2024,
@@ -113,12 +115,11 @@ function gameReducer(state, action) {
     case A.UPDATE_FREE_AGENT: return { ...state, freeAgentsPool: (state.freeAgentsPool ?? []).map(e => e.poolId === action.poolId ? { ...e, ...action.patch } : e) }
     case A.INIT_FREE_AGENTS: return { ...state, freeAgentsPool: action.pool }
     case A.LOAD_SAVE: {
-      // Migration: ensure Comedy is in unlocked genres for old saves that started with only 3
-      const _savedMilestones = action.saveData.unlockedMilestones ?? action.saveData.unlockedGenres ?? ['Romance', 'School', 'Office']
-      const _savedGenres = action.saveData.unlockedGenres ?? ['Romance', 'School', 'Office']
-      const _migratedMilestones = _savedMilestones.includes('Comedy') ? _savedMilestones : [..._savedMilestones, 'Comedy']
-      const _migratedGenres = _savedGenres.includes('Comedy') ? _savedGenres : [..._savedGenres, 'Comedy']
-      return { ...action.saveData, started: action.saveData.started !== undefined ? action.saveData.started : true, startYear: action.saveData.startYear ?? 2024, eventLog: action.saveData.eventLog ?? [], fixedCPs: action.saveData.fixedCPs ?? [], freeAgentsPool: action.saveData.freeAgentsPool ?? [], rivals: action.saveData.rivals?.length ? action.saveData.rivals : generateRivals(), productionsCompleted: action.saveData.productionsCompleted ?? 0, gradeCounts: action.saveData.gradeCounts ?? {}, fixedCPNames: action.saveData.fixedCPNames ?? {}, genreTrends: action.saveData.genreTrends ?? [], unlockedGenres: _migratedGenres, unlockedMilestones: _migratedMilestones, unlockedThemes: action.saveData.unlockedThemes ?? ['Slow Burn', 'Friends-to-Lovers', 'Enemies-to-Lovers', 'Soulmates', 'Forbidden Love'], awardsPhase: null, awardsData: null }
+      const migrated = migrateSaveData(action.saveData)
+      return {
+        ...migrated,
+        rivals: migrated.rivals?.length ? migrated.rivals : generateRivals(),
+      }
     }
     case A.MARK_SAVED: return { ...state, lastSaved: action.ts }
     case A.INCREMENT_GRADE_COUNT: return { ...state, gradeCounts: { ...(state.gradeCounts ?? {}), [action.grade]: ((state.gradeCounts ?? {})[action.grade] ?? 0) + 1 } }
@@ -142,7 +143,7 @@ export function GameProvider({ children }) {
   useEffect(() => {
     if (!state.started) return
     clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => { try { localStorage.setItem('bl_tycoon_save', JSON.stringify(state)); dispatch({ type: A.MARK_SAVED, ts: Date.now() }) } catch (e) { console.warn('Auto-save failed:', e) } }, 1000)
+      saveTimer.current = setTimeout(() => { try { localStorage.setItem('bl_tycoon_save', JSON.stringify(createSaveData(state))); dispatch({ type: A.MARK_SAVED, ts: Date.now() }) } catch (e) { console.warn('Auto-save failed:', e) } }, 1000)
     return () => clearTimeout(saveTimer.current)
   }, [state])
   return React.createElement(GameContext.Provider, { value: { state, dispatch } }, children)

@@ -424,7 +424,7 @@ export function calcCost(type, budgetMult, scheduleId, castSize, costMod = 1.0, 
 
 // ─── Revenue formula ──────────────────────────────────────────────────────────
 // revenueMod: tier-based revenue modifier (default 1.0 = no change)
-export function calcRevenue(audienceScore, budgetMult, type, platform, revenueMod = 1.0, story) {
+export function calcRevenue(audienceScore, budgetMult, type, platform, revenueMod = 1.0, story, rng = Math.random) {
   let realPlatform = platform
   let realMod = revenueMod
   let realStory = story
@@ -445,7 +445,8 @@ export function calcRevenue(audienceScore, budgetMult, type, platform, revenueMo
   const scoreMult = Math.pow(cappedAudience / 100, 1.3) * (1 + overCap * 0.008)
   const storyVariance = STORY_TYPES.find(st => st.id === realStory)?.revenueVariance ?? 0
   const variance = Math.min(0.35, (pf?.revenueVariance ?? 0) + storyVariance)
-  const performanceMult = 1 + (Math.random() * 2 - 1) * variance
+  const random = typeof rng === 'function' ? rng : Math.random
+  const performanceMult = 1 + (random() * 2 - 1) * variance
   const platMult    = pf?.revMult ?? 1.0
   return Math.round(baseRevenue * scoreMult * platMult * performanceMult * realMod)
 }
@@ -462,7 +463,7 @@ function studioQualityMult(productionsCompleted) {
 }
 
 // ─── Score formula ────────────────────────────────────────────────────────────
-export function calcScore(production, castActors, chemistryBonus = 0, productionsCompleted = 0) {
+export function calcScore(production, castActors, chemistryBonus = 0, productionsCompleted = 0, rng = Math.random) {
   if (!castActors.length) return 0
 
   const { type, budget, schedule, story, genre } = production
@@ -494,7 +495,8 @@ export function calcScore(production, castActors, chemistryBonus = 0, production
   const genreDetails = GENRE_DETAILS[genre] ?? {}
   const difficulty = genreDetails.difficulty ?? 1
   const diffPenaltyMult = 1.0 - (difficulty - 1) * 0.04
-  const riskVariance = (difficulty - 1) * 0.02 * (Math.random() - 0.5)
+  const random = typeof rng === 'function' ? rng : Math.random
+  const riskVariance = (difficulty - 1) * 0.02 * (random() - 0.5)
 
   // Mitigate high RNG difficulty risks based on existing strategic factors (Con 3):
   // 1. Studio experience (productionsCompleted): up to 50% risk reduction at 10+ productions.
@@ -591,7 +593,7 @@ export function createProduction({
 }
 
 // ─── Advance production by one week ──────────────────────────────────────────
-export function tickProduction(production) {
+export function tickProduction(production, rng = Math.random) {
   const { phase } = production
 
   if (phase === 'filming') {
@@ -617,7 +619,16 @@ export function tickProduction(production) {
       const emoji = themeComboResult.emoji ?? '💕'
       const color = themeComboResult.color ?? 'var(--green)'
       const fitLabel = themeComboResult.fitLabel ?? 'Good Fit'
-      const comboResult = { label, mult: finalMult, emoji, color, fitLabel }
+       const comboResult = {
+         label,
+         mult: finalMult,
+         emoji,
+         color,
+         fitLabel,
+         formatGenreMult: genreTypeCombo.mult,
+         genreThemeMult: hasTheme ? themeComboResult.mult : null,
+         typeThemeBonus,
+       }
 
       return { weeksLeft: 0, progressPct: 100, phase: 'wrap', comboResult, status: 'active' }
     }
@@ -631,9 +642,9 @@ export function tickProduction(production) {
 
   if (phase === 'releasing') {
     const ep        = (production.episodesReleased ?? 0) + 1
-    const rating    = rollEpisodeRating(production)
+    const rating    = rollEpisodeRating(production, rng)
     const epRatings = [...(production.episodeRatings ?? []), rating]
-    const viewers   = rollViewers(production, rating, ep)
+    const viewers   = rollViewers(production, rating, ep, rng)
     if (ep >= production.episodesTotal) {
       return { phase: 'done', episodesReleased: ep, episodeRatings: epRatings, viewerCount: viewers, status: 'completed' }
     }
@@ -643,16 +654,18 @@ export function tickProduction(production) {
   return { status: 'completed' }
 }
 
-function rollEpisodeRating(production) {
+function rollEpisodeRating(production, rng = Math.random) {
   const comboMult = production.comboResult?.mult ?? 1.0
-  const base = 4 + Math.random() * 4          // 4–8 base
+  const random = typeof rng === 'function' ? rng : Math.random
+  const base = 4 + random() * 4          // 4–8 base
   return Math.round(Math.min(10, Math.max(1, base * comboMult)))
 }
 
-function rollViewers(production, rating, ep) {
+function rollViewers(production, rating, ep, rng = Math.random) {
   const pf    = PLATFORMS.find(p => p.id === production.platform)
   const reach = pf?.reachMult ?? 1.0
   const momentum = 1 + (ep - 1) * 0.1        // slight growth each ep
-  const base = 50000 + Math.random() * 100000
+  const random = typeof rng === 'function' ? rng : Math.random
+  const base = 50000 + random() * 100000
   return Math.round(base * reach * momentum * rating / 7)
 }

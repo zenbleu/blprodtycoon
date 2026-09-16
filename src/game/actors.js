@@ -216,7 +216,7 @@ const TIER_GAP_MULTS = [
 // ─── Build chemistry maps for all actors ──────────────────────────────────────
 // Formula: base = random(0-30)×gapMult + (shared × 20)×traitMult, capped 0-100
 // Must be called AFTER all actors are initActor'd.
-export function initChemistry(actors) {
+export function initChemistry(actors, rng = Math.random) {
   const result = actors.map(a => ({ ...a, chemistry_map: {} }))
   for (let i = 0; i < result.length; i++) {
     for (let j = i + 1; j < result.length; j++) {
@@ -225,7 +225,7 @@ export function initChemistry(actors) {
       const shared = a.characteristics.filter(c => b.characteristics.includes(c)).length
       const gap    = Math.abs(TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier))
       const mult   = TIER_GAP_MULTS[Math.min(gap, 3)]
-      const randomPart = Math.round(rndInt(0, 30) * mult.random)
+       const randomPart = Math.round(rndInt(0, 30, rng) * mult.random)
       const traitPart  = Math.round(shared * 20 * mult.trait)
       const base   = clamp(randomPart + traitPart, 0, 100)
       result[i].chemistry_map[b.id] = base
@@ -624,7 +624,7 @@ export function checkTierPromotion(actor, history) {
  * Build the UPDATE_ACTOR patch that applies a tier promotion.
  * Boosts every skill toward the new tier's range and gives a happiness/loyalty bump.
  */
-export function applyTierPromotion(actor) {
+export function applyTierPromotion(actor, rng = Math.random) {
   const req = TIER_PROMOTION_REQ[actor.tier]
   if (!req) return {}
 
@@ -634,7 +634,7 @@ export function applyTierPromotion(actor) {
   const newSkills = {}
   for (const key of SKILL_KEYS) {
     const current  = actor.skills?.[key] ?? 0
-    const inc      = rndInt(boost.min, boost.max)
+     const inc      = rndInt(boost.min, boost.max, rng)
     newSkills[key] = Math.min(nextStats.skillMax, current + inc)
   }
 
@@ -653,8 +653,9 @@ export function effectiveStat(actor, key) {
 }
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
-function rndInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min
+function rndInt(min, max, rng = Math.random) {
+  const random = typeof rng === 'function' ? rng : Math.random
+  return Math.floor(random() * (max - min + 1)) + min
 }
 
 function clamp(v, lo, hi) {

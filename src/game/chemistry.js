@@ -146,7 +146,7 @@ const TIER_GAP_FILM_MULT = [1.00, 0.92, 0.84, 0.75]
 
 // ─── Legacy: calcBondGrowth / applyBondDeltas (used by weekAdvance) ──────────
 // Applies a tier-gap multiplier so cross-tier pairs grow chemistry more slowly.
-export function calcBondGrowth(castActors, score, growthMult = 1) {
+export function calcBondGrowth(castActors, score, growthMult = 1, rng = Math.random) {
   const base   = 3 + Math.round(score / 20)
   const deltas = {}
   for (let i = 0; i < castActors.length; i++) {
@@ -154,7 +154,8 @@ export function calcBondGrowth(castActors, score, growthMult = 1) {
       const a = castActors[i], b = castActors[j]
       const gap      = Math.abs(TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier))
       const filmMult = TIER_GAP_FILM_MULT[Math.min(gap, 3)]
-      const d        = Math.round((base + Math.floor(Math.random() * 3)) * filmMult * growthMult)
+       const random   = typeof rng === 'function' ? rng : Math.random
+       const d        = Math.round((base + Math.floor(random() * 3)) * filmMult * growthMult)
       deltas[a.id] ??= {}; deltas[b.id] ??= {}
       deltas[a.id][b.id] = (deltas[a.id][b.id] ?? 0) + d
       deltas[b.id][a.id] = (deltas[b.id][a.id] ?? 0) + d

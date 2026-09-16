@@ -3,7 +3,7 @@
  * Prompt 5: integrates the four critics into the final evaluation.
  */
 import { runAllCritics } from './critics.js'
-import { calcRevenue, getRatingFit, PLATFORMS, PROD_TYPES, RATINGS } from './productions.js'
+import { calcRevenue, getRatingFit, PLATFORMS, PROD_TYPES, RATINGS, SCHEDULES } from './productions.js'
 
 // ─── Score → grade (F/D/C/B/A/S/S+ scale) ────────────────────────────────────
 export function scoreGrade(score) {
@@ -50,9 +50,10 @@ const CRITIC_LINES = {
   'F':  ['「A catastrophe. Questions are being asked at the top.」', '「The internet has not been kind.」'],
 }
 
-export function criticQuote(grade) {
+export function criticQuote(grade, rng = Math.random) {
   const lines = CRITIC_LINES[grade] ?? CRITIC_LINES['C']
-  return lines[Math.floor(Math.random() * lines.length)]
+  const random = typeof rng === 'function' ? rng : Math.random
+  return lines[Math.floor(random() * lines.length)]
 }
 
 // ─── Full evaluation summary ──────────────────────────────────────────────────
@@ -66,11 +67,23 @@ export function criticQuote(grade) {
  * @param {Array}  args.castActors   — actor objects
  * @param {number} args.chemValue    — lead pair chemistry 0-100
  */
-export function evaluateProduction({ production, score, revenue, reputation, castActors = [], chemValue = 0, tier, genreTrends = [] }) {
+export function evaluateProduction({
+  production,
+  score,
+  revenue,
+  reputation,
+  castActors = [],
+  chemValue = 0,
+  tier,
+  genreTrends = [],
+  baseScore = score,
+  genreReuseMod = 1,
+  rng = Math.random,
+}) {
   const productionScore = score
 
   // 1. Critic Reviews (Phase 6)
-  const critiqueResult = runAllCritics(production, castActors, chemValue, productionScore, tier, genreTrends)
+  const critiqueResult = runAllCritics(production, castActors, chemValue, productionScore, tier, genreTrends, rng)
   const criticScore = critiqueResult.finalScore
 
   // 2. Audience Reception (Phase 6)
@@ -83,12 +96,86 @@ export function evaluateProduction({ production, score, revenue, reputation, cas
 
   // 3. Revenue (Phase 6)
   const budgetMult = typeof production.budget === 'number' ? production.budget : 1.0
-  const calculatedRevenue = calcRevenue(audienceScore, budgetMult, production.type, production.platform ?? 'tv', tier?.revenueMod ?? 1.0, production.story)
+  const calculatedRevenue = calcRevenue(
+    audienceScore,
+    budgetMult,
+    production.type,
+    production.platform ?? 'tv',
+    tier?.revenueMod ?? 1.0,
+    production.story,
+    rng,
+  )
   const finalRevenue = revenue !== undefined ? revenue : calculatedRevenue
 
   // 4. Studio Popularity (Phase 6)
   const popDelta = popularityDelta(audienceScore, finalRevenue, productionScore, production.type, production.platform, production.rating, production.genre)
   const platformRepMult = PLATFORMS.find(p => p.id === production.platform)?.repMult ?? 1
+  const platformInfo = PLATFORMS.find(p => p.id === production.platform)
+  const scheduleInfo = SCHEDULES.find(s => s.id === production.schedule)
+  const combo = production.comboResult
+  const formatGenreMult = combo?.formatGenreMult
+  const formatGenreLabel = formatGenreMult >= 1.5
+    ? 'Perfect Fit'
+    : formatGenreMult <= 0.6 ? 'Bad Fit' : 'Good Fit'
+  const resultBreakdown = [
+    {
+      id: 'quality',
+      label: 'Actor & production quality',
+      value: `${Math.round(baseScore)}/100`,
+      tone: 'pink',
+    },
+    {
+      id: 'chemistry',
+      label: 'Lead chemistry',
+      value: `${Math.round(chemValue)}/100`,
+      tone: 'pink',
+    },
+    {
+      id: 'format',
+      label: 'Format × genre fit',
+      value: formatGenreMult
+        ? `${formatGenreLabel} · ×${formatGenreMult}`
+        : 'Standard fit',
+      tone: formatGenreMult >= 1.5
+        ? 'gold'
+        : formatGenreMult <= 0.6 ? 'red' : 'green',
+    },
+    {
+      id: 'theme',
+      label: production.theme ? 'Genre × theme fit' : 'Theme contribution',
+      value: production.theme
+        ? `${combo?.fitLabel ?? 'Good Fit'}${combo?.genreThemeMult ? ` · ×${combo.genreThemeMult}` : ''}`
+        : 'No theme selected',
+      tone: combo?.genreThemeMult >= 1.1
+        ? 'gold'
+        : combo?.genreThemeMult <= 0.9 ? 'red' : 'green',
+    },
+    {
+      id: 'schedule',
+      label: 'Schedule quality',
+      value: scheduleInfo ? `${scheduleInfo.label} · ×${scheduleInfo.qMult}` : 'Standard schedule',
+      tone: scheduleInfo?.qMult >= 1 ? 'blue' : 'red',
+    },
+    { id: 'budget', label: 'Budget plan', value: `${budgetMult.toFixed(2)}×`, tone: 'gold' },
+    {
+      id: 'trend',
+      label: 'Genre trend',
+      value: isTrending ? 'Trending · +8 audience' : 'No trend bonus',
+      tone: isTrending ? 'gold' : 'gray',
+    },
+    {
+      id: 'reuse',
+      label: 'Genre freshness',
+      value: genreReuseMod < 1 ? `${Math.round((genreReuseMod - 1) * 100)}% reuse penalty` : 'Fresh genre',
+      tone: genreReuseMod < 1 ? 'red' : 'green',
+    },
+    {
+      id: 'platform',
+      label: 'Platform profile',
+      value: platformInfo ? `${platformInfo.label} · rev ×${platformInfo.revMult}` : 'Default platform',
+      tone: 'blue',
+    },
+  ]
 
   const { grade, label, color } = scoreGrade(criticScore)
 
@@ -102,7 +189,7 @@ export function evaluateProduction({ production, score, revenue, reputation, cas
     criticScore,                    // critic reviews score
     audienceScore,                  // audience reception score
     revenue:       finalRevenue,    // revenue
-    criticQuote:   criticQuote(grade),
+    criticQuote:   criticQuote(grade, rng),
 
     // Critic-derived deltas
     repDelta:      Math.round(critiqueResult.repDelta * platformRepMult),
@@ -116,5 +203,6 @@ export function evaluateProduction({ production, score, revenue, reputation, cas
     controversy:   critiqueResult.controversy,
     fanReviews:    critiqueResult.fanReviews,
     socialPosts:   critiqueResult.socialPosts,
+    resultBreakdown,
   }
 }

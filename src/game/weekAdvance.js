@@ -166,14 +166,16 @@ export function useWeekAdvance() {
       const isTrending = (state.genreTrends ?? []).includes(prod.genre)
 
       // Four-critics evaluation (reconstructed into a clean sequential pipeline inside evaluators.js)
-      const evalResult = evaluateProduction({
+       const evalResult = evaluateProduction({
         production: prod,
         score:      adjBase,
+         baseScore,
         reputation: state.reputation,
         castActors,
         chemValue,
         tier,                // Prompt 8: pass tier for rep cap & distribution
         genreTrends: state.genreTrends ?? [],
+         genreReuseMod,
       })
 
       const finalScore = evalResult.score

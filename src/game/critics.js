@@ -7,8 +7,9 @@ import { getChem } from './chemistry.js'
 import { GENRE_DETAILS, getRatingFit } from './productions.js'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function pick(arr) {
-  return arr[Math.floor(Math.random() * arr.length)]
+function pick(arr, rng = Math.random) {
+  const random = typeof rng === 'function' ? rng : Math.random
+  return arr[Math.floor(random() * arr.length)]
 }
 function roundStars(v) {
   return Math.max(1, Math.min(5, Math.round(v * 2) / 2))
@@ -151,33 +152,33 @@ export function fillTemplate(tmpl, { A, B, T, CP, N }) {
     .replace(/\{N\}/g, N ?? '1')
 }
 
-function pickReviews(score, vars) {
+function pickReviews(score, vars, rng = Math.random) {
   const out = []
   if (score >= 70) {
-    out.push(fillTemplate(pick(FAN_REVIEWS_POSITIVE), vars))
-    out.push(fillTemplate(pick(FAN_REVIEWS_MID),      vars))
+     out.push(fillTemplate(pick(FAN_REVIEWS_POSITIVE, rng), vars))
+     out.push(fillTemplate(pick(FAN_REVIEWS_MID, rng),      vars))
   } else if (score >= 45) {
-    out.push(fillTemplate(pick(FAN_REVIEWS_MID),      vars))
-    out.push(fillTemplate(pick(FAN_REVIEWS_POSITIVE), vars))
-    out.push(fillTemplate(pick(FAN_REVIEWS_NEGATIVE), vars))
+     out.push(fillTemplate(pick(FAN_REVIEWS_MID, rng),      vars))
+     out.push(fillTemplate(pick(FAN_REVIEWS_POSITIVE, rng), vars))
+     out.push(fillTemplate(pick(FAN_REVIEWS_NEGATIVE, rng), vars))
   } else {
-    out.push(fillTemplate(pick(FAN_REVIEWS_NEGATIVE), vars))
-    out.push(fillTemplate(pick(FAN_REVIEWS_MID),      vars))
+     out.push(fillTemplate(pick(FAN_REVIEWS_NEGATIVE, rng), vars))
+     out.push(fillTemplate(pick(FAN_REVIEWS_MID, rng),      vars))
   }
   return out
 }
 
-function pickSocial(score, vars) {
+function pickSocial(score, vars, rng = Math.random) {
   const out = []
   if (score >= 70) {
-    out.push(fillTemplate(pick(SOCIAL_POSTS_POSITIVE), vars))
-    out.push(fillTemplate(pick(SOCIAL_POSTS_MID),      vars))
+     out.push(fillTemplate(pick(SOCIAL_POSTS_POSITIVE, rng), vars))
+     out.push(fillTemplate(pick(SOCIAL_POSTS_MID, rng),      vars))
   } else if (score >= 45) {
-    out.push(fillTemplate(pick(SOCIAL_POSTS_MID),      vars))
-    out.push(fillTemplate(pick(SOCIAL_POSTS_NEGATIVE), vars))
+     out.push(fillTemplate(pick(SOCIAL_POSTS_MID, rng),      vars))
+     out.push(fillTemplate(pick(SOCIAL_POSTS_NEGATIVE, rng), vars))
   } else {
-    out.push(fillTemplate(pick(SOCIAL_POSTS_NEGATIVE), vars))
-    out.push(fillTemplate(pick(SOCIAL_POSTS_NEGATIVE), vars))
+     out.push(fillTemplate(pick(SOCIAL_POSTS_NEGATIVE, rng), vars))
+     out.push(fillTemplate(pick(SOCIAL_POSTS_NEGATIVE, rng), vars))
   }
   return out
 }
@@ -185,7 +186,7 @@ function pickSocial(score, vars) {
 // ─── Four critic scoring functions ────────────────────────────────────────────
 
 /** MEDIA CRITIC — fan service & promo chemistry */
-function scoreMedia(prod, castActors, chemValue, baseScore) {
+function scoreMedia(prod, castActors, chemValue, baseScore, rng) {
   const chem    = chemValue / 100
   const base    = baseScore / 100
   const fixed   = prod.fixedCP ? 0.5 : 0
@@ -194,7 +195,7 @@ function scoreMedia(prod, castActors, chemValue, baseScore) {
   const storyPenalty = prod.story === 'adaptation' ? 0.15 : 0
   // Recalibrated: base has higher impact, chemistry slightly reduced, adaptation penalty applied
   const stars   = roundStars(1.2 + base * 1.8 + chem * 1.1 + fixed - expectationPenalty - storyPenalty)
-  const quoteRaw = pick(stars >= 4 ? QUOTES.media.high : stars >= 3 ? QUOTES.media.mid : QUOTES.media.low)
+  const quoteRaw = pick(stars >= 4 ? QUOTES.media.high : stars >= 3 ? QUOTES.media.mid : QUOTES.media.low, rng)
   return {
     id: 'media', name: 'Media Critic', icon: '📰',
     role: 'Fan service & promo chemistry',
@@ -204,7 +205,7 @@ function scoreMedia(prod, castActors, chemValue, baseScore) {
 }
 
 /** INDUSTRY CRITIC — craft & trope execution */
-function scoreIndustry(prod, castActors, chemValue, baseScore) {
+function scoreIndustry(prod, castActors, chemValue, baseScore, rng) {
   const combo   = prod.comboResult?.mult ?? 1.0
   const cbBonus = combo >= 1.5 ? 0.8 : combo <= 0.6 ? -0.6 : 0.2
   const sched   = prod.schedule === '12m' ? 0.5 : prod.schedule === '6m' ? 0.2 : 0
@@ -216,7 +217,7 @@ function scoreIndustry(prod, castActors, chemValue, baseScore) {
   const storyPenalty = prod.story === 'adaptation' ? 0.25 : 0
   // Recalibrated: base has higher impact, skill dominates execution
   const stars   = roundStars(1.4 + base * 2.2 + bonus - expectationPenalty - storyPenalty)
-  const quoteRaw = pick(stars >= 4 ? QUOTES.industry.high : stars >= 3 ? QUOTES.industry.mid : QUOTES.industry.low)
+  const quoteRaw = pick(stars >= 4 ? QUOTES.industry.high : stars >= 3 ? QUOTES.industry.mid : QUOTES.industry.low, rng)
   return {
     id: 'industry', name: 'Industry Critic', icon: '🏭',
     role: 'Craft & trope execution',
@@ -226,7 +227,7 @@ function scoreIndustry(prod, castActors, chemValue, baseScore) {
 }
 
 /** BL FAN CRITIC — skinship & romantic tension */
-function scoreBLFan(prod, castActors, chemValue, baseScore) {
+function scoreBLFan(prod, castActors, chemValue, baseScore, rng) {
   const chem      = chemValue / 100
   const visualAvg = castActors.length
     ? castActors.reduce((s, a) => s + (a.skills?.visual ?? 40), 0) / castActors.length / 100
@@ -238,7 +239,7 @@ function scoreBLFan(prod, castActors, chemValue, baseScore) {
   const expectationPenalty = (expectations - 1) * 0.1
   // Recalibrated: base quality + visual appeal + chemistry balanced nicely
   const stars   = roundStars(1.0 + base * 0.6 + chem * 1.6 + visualAvg * 1.4 + rBonus - expectationPenalty)
-  const quoteRaw = pick(stars >= 4 ? QUOTES.bl_fan.high : stars >= 3 ? QUOTES.bl_fan.mid : QUOTES.bl_fan.low)
+  const quoteRaw = pick(stars >= 4 ? QUOTES.bl_fan.high : stars >= 3 ? QUOTES.bl_fan.mid : QUOTES.bl_fan.low, rng)
   return {
     id: 'bl_fan', name: 'BL Fan Critic', icon: '💕',
     role: 'Skinship & romantic tension',
@@ -248,7 +249,7 @@ function scoreBLFan(prod, castActors, chemValue, baseScore) {
 }
 
 /** SOCIAL CRITIC — LGBTQ+ representation & respect */
-function scoreSocial(prod, castActors, chemValue, baseScore) {
+function scoreSocial(prod, castActors, chemValue, baseScore, rng) {
   const ratingFit = getRatingFit(prod.genre, prod.rating)
   const rMod      = prod.rating === 'pg' && ['School', 'Comedy', 'Slice of Life'].includes(prod.genre) ? 0.55 : 0
   const srPenalty = ratingFit.socialBonus
@@ -257,7 +258,7 @@ function scoreSocial(prod, castActors, chemValue, baseScore) {
   const expectationPenalty = (expectations - 1) * 0.1
   // Recalibrated: base has higher impact, floor set correctly
   const stars     = roundStars(1.5 + base * 1.8 + rMod + srPenalty - expectationPenalty)
-  const quoteRaw  = pick(stars >= 4 ? QUOTES.social.high : stars >= 3 ? QUOTES.social.mid : QUOTES.social.low)
+  const quoteRaw  = pick(stars >= 4 ? QUOTES.social.high : stars >= 3 ? QUOTES.social.mid : QUOTES.social.low, rng)
   return {
     id: 'social', name: 'Social Critic', icon: '🌈',
     role: 'LGBTQ+ representation & respect',
@@ -276,12 +277,12 @@ function scoreSocial(prod, castActors, chemValue, baseScore) {
  * @param {object} [tier]     game tier config from getGameTier() — for rep cap & distribution
  * @returns {object}
  */
-export function runAllCritics(production, castActors, chemValue, baseScore, tier, genreTrends = []) {
+export function runAllCritics(production, castActors, chemValue, baseScore, tier, genreTrends = [], rng = Math.random) {
   const critics = [
-    scoreMedia   (production, castActors, chemValue, baseScore),
-    scoreIndustry(production, castActors, chemValue, baseScore),
-    scoreBLFan   (production, castActors, chemValue, baseScore),
-    scoreSocial  (production, castActors, chemValue, baseScore),
+     scoreMedia   (production, castActors, chemValue, baseScore, rng),
+     scoreIndustry(production, castActors, chemValue, baseScore, rng),
+     scoreBLFan   (production, castActors, chemValue, baseScore, rng),
+     scoreSocial  (production, castActors, chemValue, baseScore, rng),
   ]
 
   // Prompt 8: apply tier star bonus to shift distribution toward positive at lower tiers
@@ -311,8 +312,8 @@ export function runAllCritics(production, castActors, chemValue, baseScore, tier
   const N  = production.episodesTotal ?? 1
   const vars = { A, B, T, CP, N }
 
-  const fanReviews  = pickReviews(finalScore, vars)
-  const socialPosts = pickSocial (finalScore, vars)
+  const fanReviews  = pickReviews(finalScore, vars, rng)
+  const socialPosts = pickSocial (finalScore, vars, rng)
 
   return {
     critics,
