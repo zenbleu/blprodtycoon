@@ -1,3 +1,4 @@
 - [Tier scaling system](tier-scaling.md) — rank-based tier in src/game/tiers.js; all balance params centralised there, imported by events/actors/productions/evaluators/weekAdvance/TopBar/ProductionForm.
 - [Genre unlock system](genre-unlock.md) — genres gated by production grade; unlockedGenres in state; GENRE_UNLOCK_BY_GRADE in productions.js; reuse penalty in weekAdvance.js.
 - [Theme system](theme-system.md) — 29 themes in src/game/themes.js; unlockedThemes in state; combined combo = avg(genreType + genreTheme)/2 + typeThemeBonus computed in tickProduction wrap phase.
+- [GitHub Pages assets](github-pages-assets.md) — Pages must receive hydrated media bytes; the repository’s committed LFS pointers currently reference unavailable objects.
