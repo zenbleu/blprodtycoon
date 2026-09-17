@@ -26,14 +26,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # The repository contains stale LFS pointer files whose objects are
-          # not present on GitHub. Do not make Pages checkout fail on them.
-          lfs: false
+          lfs: true
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9.15.9
+
+      - name: Verify media assets were hydrated
+        run: |
+          pointer_files="$(grep -RIl --include='*.jpg' --include='*.jpeg' --include='*.png' 'git-lfs.github.com/spec/v1' public src/assets || true)"
+          if [ -n "$pointer_files" ]; then
+            echo "The following media files are still Git LFS pointers:"
+            printf '%s\n' "$pointer_files"
+            echo "Restore the corresponding Git LFS objects before deploying Pages."
+            exit 1
+          fi
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -46,6 +54,10 @@ jobs:
 
       - name: Build
         run: pnpm run build
+        env:
+          # GitHub Pages is a repository/project site, not a domain-root site.
+          # Keep the repository name in sync for forks and renamed repositories.
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
