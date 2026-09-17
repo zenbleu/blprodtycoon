@@ -3,15 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@9.15.9",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test tests",
-    "cap:sync": "npx cap sync",
-    "cap:open:android": "npx cap open android",
-    "build:android": "npm run build && npm run cap:sync && cd android && ./gradlew assembleDebug",
-    "build:android:release": "npm run build && npm run cap:sync && cd android && ./gradlew assembleRelease"
+    "cap:sync": "pnpm exec cap sync",
+    "cap:open:android": "pnpm exec cap open android",
+    "build:android": "pnpm run build && pnpm run cap:sync && cd android && ./gradlew assembleDebug",
+    "build:android:release": "pnpm run build && pnpm run cap:sync && cd android && ./gradlew assembleRelease"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.2",

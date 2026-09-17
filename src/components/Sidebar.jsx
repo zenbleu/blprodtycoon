@@ -6,7 +6,7 @@
  */
 import React, { useState, useEffect, useRef } from 'react'
 import { useGame } from '../game/state.jsx'
-import { useWeekAdvance } from '../game/weekAdvance.js'
+import { useWeekAdvance } from '../game/weekAdvanceHook.jsx'
 import { SFX } from '../game/audio.js'
 
 const NAV_ITEMS = [

@@ -12,10 +12,10 @@ Vite + React + TypeScript + Tailwind CSS template with Shadcn/ui pre-configured.
 
 ```bash
 # Run all linting (types + JS + CSS)
-npm run lint
+pnpm run lint
 
 # Individual linting
-npm run lint:types # TypeScript (tsc --noEmit)
-npm run lint:js    # ESLint
-npm run lint:css   # Stylelint
+pnpm run lint:types # TypeScript (tsc --noEmit)
+pnpm run lint:js    # ESLint
+pnpm run lint:css   # Stylelint
 ```

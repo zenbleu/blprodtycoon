@@ -10,24 +10,24 @@ This is a quick copy-paste guide for building your APK. Just follow the commands
 # 1. Navigate to your project
 cd blprodtycoon
 
-# 2. Clean install (fixes most npm errors)
-rm -rf node_modules package-lock.json pnpm-lock.yaml
-npm install
+# 2. Clean install (fixes most pnpm errors)
+rm -rf node_modules pnpm-lock.yaml
+pnpm install
 
 # 3. Build the web version
-npm run build
+pnpm run build
 
 # 4. Initialize Capacitor (only if first time)
-npm run cap:init
+pnpm exec cap init
 
 # 5. Add Android support (only if first time)
-npm run cap:add:android
+pnpm exec cap add android
 
 # 6. Sync files to Android
-npm run cap:sync
+pnpm run cap:sync
 
 # 7. Build the APK (DEBUG version - fastest for testing)
-npm run build:android
+pnpm run build:android
 ```
 
 ### ✅ Your APK is ready at:
@@ -39,12 +39,12 @@ android/app/build/outputs/apk/debug/app-debug.apk
 
 ## 📦 If You Get Errors
 
-### Most Common Error: "npm install fails"
+### Most Common Error: "pnpm install fails"
 ```bash
 # Solution:
-npm cache clean --force
+pnpm store prune
 rm -rf node_modules
-npm install
+pnpm install
 ```
 
 ### Error: "gradle not found" or "JAVA_HOME not set"
@@ -68,7 +68,7 @@ Then restart your terminal.
 cd android
 ./gradlew clean
 cd ..
-npm run build:android
+pnpm run build:android
 ```
 
 ---
@@ -79,10 +79,10 @@ If you want a smaller, production-ready APK:
 
 ```bash
 # 1. First, build web
-npm run build
+pnpm run build
 
 # 2. Sync files
-npm run cap:sync
+pnpm run cap:sync
 
 # 3. Build release APK
 cd android
@@ -126,9 +126,9 @@ adb logcat
 After you modify your code:
 
 ```bash
-npm run build
-npm run cap:sync
-npm run build:android
+pnpm run build
+pnpm run cap:sync
+pnpm run build:android
 ```
 
 ---
@@ -138,7 +138,7 @@ npm run build:android
 ### If APK installs but app crashes:
 1. Check Android Studio for build errors
 2. Run: `cd android && ./gradlew clean && cd ..`
-3. Try again: `npm run build && npm run cap:sync && npm run build:android`
+3. Try again: `pnpm run build && pnpm run cap:sync && pnpm run build:android`
 
 ### Make it smaller:
 - Use release build instead of debug
@@ -148,7 +148,7 @@ npm run build:android
 ### Test on emulator (no phone needed):
 - Open Android Studio
 - Create Virtual Device (AVD)
-- Run: `npm run build:android`
+- Run: `pnpm run build:android`
 - Choose emulator when prompted
 
 ---
@@ -170,12 +170,12 @@ npm run build:android
 **Step 4:** If all else fails:
 ```bash
 # Nuclear option - complete fresh start
-rm -rf node_modules android dist package-lock.json
-npm install
-npm run build
-npm run cap:add:android
-npm run cap:sync
-npm run build:android
+rm -rf node_modules android dist
+pnpm install
+pnpm run build
+pnpm exec cap add android
+pnpm run cap:sync
+pnpm run build:android
 ```
 
 ---
