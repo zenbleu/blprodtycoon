@@ -8,11 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test tests",
-    "cap:sync": "pnpm exec cap sync",
-    "cap:open:android": "pnpm exec cap open android",
-    "build:android": "pnpm run build && pnpm run cap:sync && cd android && ./gradlew assembleDebug",
-    "build:android:release": "pnpm run build && pnpm run cap:sync && cd android && ./gradlew assembleRelease"
+    "test": "node --test tests"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.2",
@@ -28,12 +24,6 @@
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
-    "@capacitor/android": "^7.6.8",
-    "@capacitor/app": "^7.1.2",
-    "@capacitor/cli": "^7.6.8",
-    "@capacitor/core": "^7.6.8",
-    "@capacitor/keyboard": "^7.0.6",
-    "@capacitor/status-bar": "^7.0.6",
     "@vitejs/plugin-react": "^4.3.1",
     "vite": "^5.4.1"
   }

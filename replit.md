@@ -25,19 +25,22 @@ pnpm run build    # production build → /dist
 pnpm test         # deterministic game-rule tests
 ```
 
-## Mobile-first
-The game targets mobile web. Bottom nav on <760px, 44px touch targets, no hover-dependent interactions.
+## Responsive web
+The game targets GitHub Pages as a static web app. The layout remains mobile-friendly:
+bottom nav on <760px, 44px touch targets, and no hover-dependent interactions.
 
 ## Reference
 Original monolithic prototype: `attached_assets/index_1784307841414.html`
 Use as the functional reference for all game systems and formulas.
 
 ## Actor portraits
-Portraits are `.jpg` files at `/public/images/actor_01.jpg` through `actor_20.jpg`.
-Code references them via the `getPortraitUrl(id)` helper in `src/game/actors.js`.
+The imported repository contains legacy Git LFS pointer files rather than the
+original media bytes. The Pages workflow removes those unavailable placeholders,
+and actor cards render a deterministic initials/color fallback when portraits
+are unavailable.
 
 ## GitHub Pages
-`.github/workflows/deploy.yml` builds with pnpm and publishes `dist/` using the official Pages artifact/deploy actions. The workflow sets `VITE_BASE_PATH` to the repository name so Pages uses the project-site path (for example, `/blprodtycoon/`), while local and Capacitor/Android builds keep Vite's relative `./` base. Public assets are resolved through `src/lib/assets.js` rather than root-relative URLs.
+`.github/workflows/deploy.yml` builds with pnpm and publishes `dist/` using the official Pages artifact/deploy actions. The workflow sets `VITE_BASE_PATH` to the repository name so Pages uses the project-site path (for example, `/blprodtycoon/`), while local previews keep Vite's relative `./` base. Public assets are resolved through `src/lib/assets.js` rather than root-relative URLs.
 
 ## User preferences
 - Mobile-first, touch-friendly (thumb-sized buttons, no hover-only interactions)

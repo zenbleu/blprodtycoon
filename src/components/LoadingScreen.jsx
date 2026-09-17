@@ -3,15 +3,15 @@
  * Loading screen for BL Production Tycoon.
  * Background: one of 5 pixel-art BGs, chosen randomly once per session.
  * Progress bar: pink with a pixelated heart cursor.
- * Timer uses Date.now() + setInterval — reliable across all environments
- * including Capacitor Android WebView where requestAnimationFrame timing
- * can be unreliable during app startup.
+ * Timer uses Date.now() + setInterval so startup progress stays reliable
+ * across browsers and backgrounded tabs.
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import './LoadingScreen.css'
 import { assetUrl } from '../lib/assets.js'
 
-// Backgrounds live in public/images/loading/ — static files bundled in APK
+// Backgrounds are optional decorative assets. The CSS gradient remains visible
+// when a legacy image is unavailable.
 const BACKGROUNDS = [
   assetUrl('images/loading/bg-1.jpg'),
   assetUrl('images/loading/bg-2.jpg'),
@@ -208,7 +208,7 @@ export default function LoadingScreen({ onComplete }) {
     return () => clearTimeout(t)
   }, [reducedMotion])
 
-  // ── Progress timer — Date.now() + setInterval, reliable in Capacitor ─────────
+  // ── Progress timer — Date.now() + setInterval, reliable in browsers ──────────
   useEffect(() => {
     if (reducedMotion) return
 
@@ -268,6 +268,9 @@ export default function LoadingScreen({ onComplete }) {
         alt=""
         aria-hidden="true"
         draggable="false"
+        onError={(event) => {
+          event.currentTarget.style.display = 'none'
+        }}
       />
 
       {/* Dark overlay so HUD stays readable over any background */}

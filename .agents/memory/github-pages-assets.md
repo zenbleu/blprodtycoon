@@ -1,10 +1,17 @@
 ---
 name: GitHub Pages asset storage
-description: Deployment depends on real media bytes being available for the repository's Git LFS pointers.
+description: The imported repository has unavailable Git LFS media; Pages builds without those files and uses UI fallbacks.
 ---
 
-GitHub Pages must receive hydrated media files, not the small Git LFS pointer text files committed in the repository.
+The imported repository's original media is represented by Git LFS pointer files,
+but the corresponding objects are unavailable. GitHub Pages cannot hydrate those
+objects during checkout.
 
-**Why:** The public repository currently returns 404 for the referenced LFS object IDs, so checkout cannot restore the JPG/PNG bytes even when the Pages workflow enables LFS.
+**Why:** The public repository returns 404 for the referenced LFS object IDs, so
+enabling LFS makes the Pages checkout fail before the build starts.
 
-**How to apply:** Restore or re-upload the media to the repository's LFS storage before expecting the Pages workflow to deploy the artwork. Keep the workflow's LFS checkout and pointer validation enabled.
+**How to apply:** The Pages workflow checks out without LFS, removes only the
+unusable pointer files before Vite copies static assets, and relies on the
+existing initials/color portrait fallback plus the loading screen's CSS
+background. If original artwork is restored later, remove the cleanup step and
+re-enable LFS hydration.
