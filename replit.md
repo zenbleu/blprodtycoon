@@ -34,10 +34,10 @@ Original monolithic prototype: `attached_assets/index_1784307841414.html`
 Use as the functional reference for all game systems and formulas.
 
 ## Actor portraits
-The imported repository contains legacy Git LFS pointer files rather than the
-original media bytes. The Pages workflow removes those unavailable placeholders,
-and actor cards render a deterministic initials/color fallback when portraits
-are unavailable.
+The actor portraits and loading backgrounds are checked in as real image bytes,
+so local preview and the GitHub Pages build do not depend on Git LFS hydration.
+Actor cards still keep a deterministic initials/color fallback for any future
+missing image.
 
 ## GitHub Pages
 `.github/workflows/deploy.yml` builds with pnpm and publishes `dist/` using the official Pages artifact/deploy actions. The workflow sets `VITE_BASE_PATH` to the repository name so Pages uses the project-site path (for example, `/blprodtycoon/`), while local previews keep Vite's relative `./` base. Public assets are resolved through `src/lib/assets.js` rather than root-relative URLs.
