@@ -7,8 +7,7 @@ import { useGame } from '../game/state.jsx'
 import { SKILL_LABELS, SKILL_KEYS, STATUS_LABEL, STATUS_COLOR, TIER_COLOR, moodEmoji, portraitUrl, PORTRAIT_COLORS, actorDisplayName } from '../game/actors.js'
 import { getChem, chemTier } from '../game/chemistry.js'
 import { SFX } from '../game/audio.js'
-
-const BASE = import.meta.env.BASE_URL
+import { assetUrl } from '../lib/assets.js'
 
 const FILTER_OPTIONS = ['ALL', 'AVAILABLE', 'FILMING', 'LOCKED']
 
@@ -179,8 +178,8 @@ export function ActorPortrait({ actor, size = 64, isLocked = false, style: extra
   const padded    = String(actor.id).padStart(2, '0')
   // Pool talent actors carry a portraitFile field; use pool portrait dir
   const src = actor.portraitFile
-    ? `${BASE}images/pool/${actor.portraitFile}`
-    : `${BASE}images/actors-portraits/Actor_${padded}.jpg`
+    ? assetUrl(`images/pool/${actor.portraitFile}`)
+    : assetUrl(`images/actors-portraits/Actor_${padded}.jpg`)
   const fallback  = PORTRAIT_COLORS[(actor.id - 1) % PORTRAIT_COLORS.length]
   const initials  = (actor.name ?? '?')[0]
 

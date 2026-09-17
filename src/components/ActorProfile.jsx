@@ -9,8 +9,6 @@ import { getChem, chemTier, bondKey } from '../game/chemistry.js'
 import { SFX } from '../game/audio.js'
 import { ActorPortrait } from './ActorRoster.jsx'
 
-const BASE = import.meta.env.BASE_URL
-
 export default function ActorProfile({ actorId, onBack }) {
   const { state, dispatch } = useGame()
   const actor = state.actors.find(a => a.id === actorId)

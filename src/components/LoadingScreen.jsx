@@ -9,16 +9,15 @@
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import './LoadingScreen.css'
-
-const BASE = import.meta.env.BASE_URL
+import { assetUrl } from '../lib/assets.js'
 
 // Backgrounds live in public/images/loading/ — static files bundled in APK
 const BACKGROUNDS = [
-  `${BASE}images/loading/bg-1.jpg`,
-  `${BASE}images/loading/bg-2.jpg`,
-  `${BASE}images/loading/bg-3.jpg`,
-  `${BASE}images/loading/bg-4.jpg`,
-  `${BASE}images/loading/bg-5.jpg`,
+  assetUrl('images/loading/bg-1.jpg'),
+  assetUrl('images/loading/bg-2.jpg'),
+  assetUrl('images/loading/bg-3.jpg'),
+  assetUrl('images/loading/bg-4.jpg'),
+  assetUrl('images/loading/bg-5.jpg'),
 ]
 
 // Pick once per session — stable across re-renders

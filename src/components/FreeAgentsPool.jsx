@@ -10,8 +10,6 @@ import { SFX } from '../game/audio.js'
 import { fmtMoney } from '../game/ranking.js'
 import { ActorPortrait } from './ActorRoster.jsx'
 
-const BASE = import.meta.env.BASE_URL
-
 export default function FreeAgentsPool() {
   const { state, dispatch } = useGame()
   const [pendingSign, setPendingSign] = useState(null)  // { kind, data }

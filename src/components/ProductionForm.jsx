@@ -21,8 +21,6 @@ import { fmtMoney } from '../game/ranking.js'
 import { SFX } from '../game/audio.js'
 import { ActorPortrait } from './ActorRoster.jsx'
 
-const BASE = import.meta.env.BASE_URL
-
 const DEFAULT_BUDGET = 1.0
 const BUDGET_MIN     = 0.5
 const BUDGET_MAX     = 3.0  // Prompt 3: increased from 2.5

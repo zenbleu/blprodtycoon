@@ -16,8 +16,7 @@ import { SFX } from '../game/audio.js'
 import { triggerConfetti } from './Confetti.jsx'
 import { ActorPortrait } from './ActorRoster.jsx'
 import { PORTRAIT_COLORS, NEW_TALENT_POOL, actorDisplayName } from '../game/actors.js'
-
-const BASE = import.meta.env.BASE_URL
+import { assetUrl } from '../lib/assets.js'
 
 // Inject ceremony CSS (keyframes + utility classes)
 if (typeof document !== 'undefined') {
@@ -132,7 +131,7 @@ function RivalPortrait({ actorName, size = 72 }) {
   ]
 
   const src = poolEntry?.portraitFile
-    ? `${BASE}images/pool/${poolEntry.portraitFile}`
+    ? assetUrl(`images/pool/${poolEntry.portraitFile}`)
     : null
 
   return (
