@@ -4,8 +4,7 @@
  *           handles awards dispatch and controversy modal.
  * Prompt 8: tier-based scaling throughout.
  */
-import { useState } from 'react'
-import { useGame, A, pushToast, pushEventLog } from './state.jsx'
+import { A, pushToast, pushEventLog } from './stateCore.js'
 import { tickProduction, calcRevenue, calcScore, popularityDeltaByPlatform, PROD_TYPES } from './productions.js'
 import { weeklyActorRecovery, grantExp, NEW_TALENT_POOL, checkTierPromotion, applyTierPromotion, actorDisplayName, startHoneymoon, HONEYMOON_NEW_RECRUIT_WEEKS } from './actors.js'
 import { calcChemistryBonus, calcBondGrowth, applyBondDeltas, getChem } from './chemistry.js'
@@ -21,17 +20,16 @@ import { computeAllAwards, calcAttendanceEffects, getLackingArea, getYearFromWee
 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)) }
 
-export function useWeekAdvance() {
-  const { state, dispatch } = useGame()
-  const [advancing, setAdvancing] = useState(false)
-
-  async function advanceWeek() {
-    if (advancing) return
-    resumeAudio()
-    SFX.nextTurn()
-    setAdvancing(true)
-
-    // try-finally guarantees advancing is cleared even if an error is thrown
+/**
+ * Execute one complete week using the same dispatch pipeline as the UI.
+ *
+ * `rng` is deliberately injected at the pipeline boundary so deterministic
+ * simulations can exercise the real game flow without changing gameplay's
+ * default Math.random behaviour.
+ */
+export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }) {
+    const previousRandom = Math.random
+    Math.random = rng
     try {
     const week = state.week
     // Prompt 1: tier now derived from numeric rank, not week
@@ -50,7 +48,7 @@ export function useWeekAdvance() {
     if (weekInYear === 1 || !(state.genreTrends?.length)) {
       const trendCounts = { rookie: 3, rising: 4, popular: 5, worldwide: 6 }
       const trendCount  = trendCounts[tier.id] ?? 3
-      const shuffled    = [...GENRES].sort(() => Math.random() - 0.5)
+      const shuffled    = [...GENRES].sort(() => rng() - 0.5)
       dispatch({ type: A.SET_GENRE_TRENDS, trends: shuffled.slice(0, trendCount) })
     }
 
@@ -64,7 +62,7 @@ export function useWeekAdvance() {
       if (prod.status !== 'active') continue
       // Prompt 1 (Year Lineup): skip productions not yet at their scheduled start week
       if (prod.weekScheduled && week < prod.weekScheduled) continue
-      const patch = tickProduction(prod)
+      const patch = tickProduction(prod, rng)
       dispatch({ type: A.UPDATE_PRODUCTION, id: prod.id, patch })
 
       if (patch.status === 'completed') {
@@ -76,7 +74,7 @@ export function useWeekAdvance() {
         releasingThisWeek.push({ ...prod, ...patch })
       } else if (prod.phase === 'filming' && patch.phase !== 'wrap') {
         // Active filming week: roll for 40% chance of a contextual atmosphere message (Polish Version 1.1)
-        if (Math.random() < 0.40) {
+        if (rng() < 0.40) {
           const { text, usedIds } = generateAtmosphereMessage(prod, state.actors)
           dispatch({
             type: A.UPDATE_PRODUCTION,
@@ -139,7 +137,7 @@ export function useWeekAdvance() {
           : 0
 
       const chemBonus  = calcChemistryBonus(castActors)
-      const baseScore  = calcScore(prod, castActors, chemBonus, state.productionsCompleted ?? 0)
+      const baseScore  = calcScore(prod, castActors, chemBonus, state.productionsCompleted ?? 0, rng)
       const comboMult  = prod.comboResult?.mult ?? 1.0
       // Apply Creative Differences quality bonus before genre reuse check
       let adjBase      = Math.round(Math.min(100, baseScore * comboMult))
@@ -175,7 +173,8 @@ export function useWeekAdvance() {
         chemValue,
         tier,                // Prompt 8: pass tier for rep cap & distribution
         genreTrends: state.genreTrends ?? [],
-         genreReuseMod,
+          genreReuseMod,
+          rng,
       })
 
       const finalScore = evalResult.score
@@ -192,7 +191,7 @@ export function useWeekAdvance() {
 
       // Chemistry + XP for cast
       const chemGrowthMult = PROD_TYPES[prod.type]?.chemistryMult ?? 1
-      const chemDeltas = calcBondGrowth(castActors, finalScore, chemGrowthMult)
+       const chemDeltas = calcBondGrowth(castActors, finalScore, chemGrowthMult, rng)
       for (const actor of castActors) {
         const expPatch   = grantExp(actor, evalResult.xpPerActor)
         const newChemMap = applyBondDeltas(actor, chemDeltas)
@@ -280,15 +279,15 @@ export function useWeekAdvance() {
       }
 
       // ── Prompt 8: Reputation repair event (30% chance after rep loss) ─────
-      if (evalResult.repDelta < 0 && Math.random() < 0.30) {
-        const repGain = 10 + Math.floor(Math.random() * 11) // +10 to +20
+      if (evalResult.repDelta < 0 && rng() < 0.30) {
+        const repGain = 10 + Math.floor(rng() * 11) // +10 to +20
         const repairEvents = [
           { label: '💝 CHARITY DRIVE', desc: 'Your studio organises a surprise charity stream.' },
           { label: '🙏 PUBLIC APOLOGY', desc: 'Your studio issues a heartfelt public statement.' },
           { label: '🤝 FAN MEET', desc: 'An unannounced fan meeting wins the crowd back.' },
           { label: '💌 LETTER TO FANS', desc: 'A personal letter from the leads goes viral.' },
         ]
-        const evt = repairEvents[Math.floor(Math.random() * repairEvents.length)]
+        const evt = repairEvents[Math.floor(rng() * repairEvents.length)]
         dispatch({
           type: A.PUSH_MODAL,
           modal: {
@@ -580,7 +579,7 @@ export function useWeekAdvance() {
       const promoFlagKey = `tierPromoted_${actor.id}_to_${promoResult.nextTier}`
       if (state.flags?.[promoFlagKey]) continue
 
-      const promoPatch = applyTierPromotion(actor)
+      const promoPatch = applyTierPromotion(actor, rng)
       dispatch({ type: A.UPDATE_ACTOR, id: actor.id, patch: promoPatch })
       dispatch({ type: A.SET_FLAG, key: promoFlagKey, value: week })
 
@@ -677,7 +676,7 @@ export function useWeekAdvance() {
         // Resolve showdown after player picks a Focus strategy
         function resolveShowdown(focusBonus, s, d) {
           const winChance  = Math.min(0.92, baseWinChance + focusBonus)
-          const playerWins = Math.random() < winChance
+           const playerWins = rng() < winChance
           if (playerWins) {
             d({ type: A.ADD_REPUTATION, amount: 5 })
             d({ type: A.SET_POPULARITY, value: s.popularity + 8000 })
@@ -763,7 +762,7 @@ export function useWeekAdvance() {
     }
 
     // ── 7a2. CP events (Prompt 2) ─────────────────────────────────────────────
-    const cpEvents = rollCpEvents(state, week)
+    const cpEvents = rollCpEvents(state, week, rng)
     for (const { flagKey, modal } of cpEvents) {
       dispatch({ type: A.SET_FLAG, key: flagKey, value: week })
       const lbl = modal.data?.label ?? 'CP Event'
@@ -772,7 +771,7 @@ export function useWeekAdvance() {
     }
 
     // ── 7b. Company event ─────────────────────────────────────────────────────
-    const companyEvents = rollWeeklyEvents(state)
+    const companyEvents = rollWeeklyEvents(state, rng)
     if (companyEvents.length > 0) {
       dispatch({ type: A.SET_FLAG, key: 'lastCompanyEvent', value: week })
     }
@@ -785,7 +784,7 @@ export function useWeekAdvance() {
     }
 
     // ── 7c. Actor event ───────────────────────────────────────────────────────
-    const actorEvent = rollActorEvent(state)
+    const actorEvent = rollActorEvent(state, rng)
     if (actorEvent) {
       // Set per-event cooldown flag if provided (e.g. viral_chemistry per-actor cooldown)
       if (actorEvent.flagKey) dispatch({ type: A.SET_FLAG, key: actorEvent.flagKey, value: week })
@@ -819,7 +818,7 @@ export function useWeekAdvance() {
       const awardsYear   = getYearFromWeek(week)
       const startYear = state.startYear ?? 2026
       const calendarYear = startYear + awardsYear - 1
-      const awardsResult = computeAllAwards(state, week, extraHistoryRecords)
+      const awardsResult = computeAllAwards(state, week, extraHistoryRecords, rng)
       dispatch({ type: A.SET_AWARDS_DATA, data: awardsResult })
       // Track AotY winner for consecutive-win penalty next year
       const aotYResult = awardsResult.results.find(r => r.awardId === 'actor_of_year')
@@ -855,9 +854,6 @@ export function useWeekAdvance() {
     pushToast(dispatch, `Week ${state.week + 1} begins.`)
 
     } finally {
-      setAdvancing(false)
+      Math.random = previousRandom
     }
-  }
-
-  return { advanceWeek, advancing }
 }

@@ -3,7 +3,7 @@
  * Prompt 6: 7 company events, 10 actor event types, weekly chemistry pulse
  * Prompt 8: tier-based CP frequency, always-succeed, decline penalties, breakup threshold
  */
-import { A } from './state.jsx'
+import { A } from './stateCore.js'
 import { getChem, bondKey } from './chemistry.js'
 import { getGameTierByRank } from './tiers.js'
 
@@ -85,7 +85,7 @@ const COMPANY_EVENTS = [
     weight: 3,
     label: '🔓 SCRIPT LEAK',
     condition: s => s.productions.length > 0,
-    makeData: () => ({
+    makeData: (s) => ({
       message:
         'Unfinished script pages from your current production leaked online. '
         + 'Fans are speculating wildly.',
@@ -96,7 +96,7 @@ const COMPANY_EVENTS = [
             d({ type: A.ADD_REPUTATION, amount: -1 })
           } },
         { label: (s.reputation ?? 0) >= 20 ? '🤷 Ignore it (−1 rep — strong rep absorbs)' : '🤷 Ignore it (−3 rep)',
-          effect: (s2, d) => d({ type: A.ADD_REPUTATION, amount: (s.reputation ?? 0) >= 20 ? -1 : -3 }) },
+          effect: (s2, d) => d({ type: A.ADD_REPUTATION, amount: (s2.reputation ?? 0) >= 20 ? -1 : -3 }) },
       ],
     }),
   },
