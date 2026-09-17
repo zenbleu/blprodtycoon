@@ -2,10 +2,12 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'node:path'
 
-// A relative base works for GitHub Pages project sites and Capacitor/Android.
+// GitHub Pages serves this repository as a project site, while Capacitor loads
+// the same build from its local web root. The workflow supplies the repository
+// path for Pages; local and Android builds keep the relative default.
 export default defineConfig({
   plugins: [react()],
-  base: './',
+  base: process.env.VITE_BASE_PATH || './',
   resolve: {
     alias: {
       '@': path.resolve(process.cwd(), './src'),
