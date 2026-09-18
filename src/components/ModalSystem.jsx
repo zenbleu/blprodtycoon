@@ -47,8 +47,6 @@ export default function ModalSystem() {
     }
   }, [modal])
 
-  if (!modal) return null
-
   function dismiss(force = false) {
     if (decisionRequired && !force) return
     SFX.click()
@@ -122,6 +120,8 @@ export default function ModalSystem() {
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [modal, decisionRequired])
+
+  if (!modal) return null
 
   return (
     <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && dismiss()}>
