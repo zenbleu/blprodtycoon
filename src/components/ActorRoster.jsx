@@ -44,6 +44,7 @@ export default function ActorRoster({ openProfile }) {
             {signed.length} signed · {locked.length} locked
           </div>
           <input
+             aria-label="Search actors"
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -57,6 +58,7 @@ export default function ActorRoster({ openProfile }) {
               className={filter === f ? 'sel' : ''}
               style={{ fontSize: 7, padding: '6px 8px' }}
               onClick={() => { SFX.click(); setFilter(f) }}
+                aria-pressed={filter === f}
             >
               {f}
             </button>
@@ -105,7 +107,11 @@ function ActorCard({ actor, allActors, onClick }) {
 
   return (
     <button
+      type="button"
       onClick={onClick}
+      aria-label={isLocked
+        ? `View locked ${actor.tier ?? ''} actor. Unlock requirement: rank ${actor.tier === 'Rising Star' ? 39 : actor.tier === 'Popular' ? 24 : 9}.`
+        : `View profile for ${actorDisplayName(actor)}. Status: ${STATUS_LABEL[status]}.`}
       style={{ ...styles.card, borderColor }}
     >
       {/* Portrait */}
@@ -124,7 +130,7 @@ function ActorCard({ actor, allActors, onClick }) {
           <span style={{ fontSize: 9, color: 'var(--white)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {isLocked ? '???' : actorDisplayName(actor)}
           </span>
-          {!isLocked && <span style={{ fontSize: 14 }}>{mood}</span>}
+           {!isLocked && <span style={{ fontSize: 14 }} role="img" aria-label={`Mood: ${mood}`}>{mood}</span>}
         </div>
 
         {/* Status */}
@@ -154,8 +160,8 @@ function ActorCard({ actor, allActors, onClick }) {
             {bestChem && (() => {
               const tier = chemTier(bestChem.val)
               return (
-                <div style={{ fontSize: 6, color: tier.color, marginTop: 5 }}>
-                  {tier.emoji} {actorDisplayName(bestChem.actor)} {bestChem.val}
+             <div style={{ fontSize: 6, color: tier.color, marginTop: 5 }}>
+                   <span aria-hidden="true">{tier.emoji}</span> Best chemistry: {actorDisplayName(bestChem.actor)} {bestChem.val}
                 </div>
               )
             })()}
@@ -197,7 +203,7 @@ export function ActorPortrait({ actor, size = 64, isLocked = false, style: extra
       {!imgFailed && (
         <img
           src={src}
-          alt={actor.name}
+           alt={isLocked ? `Locked ${actor.tier ?? ''} actor portrait` : `${actor.name} portrait`}
           onError={() => setImgFailed(true)}
           style={{
             width: '100%', height: '100%',
@@ -216,7 +222,7 @@ export function ActorPortrait({ actor, size = 64, isLocked = false, style: extra
           color: 'rgba(0,0,0,0.5)',
           fontFamily: 'inherit',
         }}>
-          {isLocked ? '?' : initials}
+           <span aria-hidden={isLocked ? undefined : true}>{isLocked ? '?' : initials}</span>
         </div>
       )}
     </div>

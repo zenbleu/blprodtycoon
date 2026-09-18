@@ -397,8 +397,8 @@ function signedMoney(value = 0) {
 function BigStat({ label, value, color }) {
   return (
     <div style={styles.bigStat}>
-      <span style={{ fontSize: 7, color: 'var(--lav)', letterSpacing: 1 }}>{label}</span>
-      <span style={{ fontSize: 12, color }}>{value}</span>
+      <span style={{ fontSize: 8, color: 'var(--lav)', letterSpacing: 1 }}>{label}</span>
+      <span style={{ fontSize: 15, color }}>{value}</span>
     </div>
   )
 }

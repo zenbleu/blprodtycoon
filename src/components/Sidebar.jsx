@@ -89,6 +89,9 @@ export default function Sidebar({ currentScreen, setScreen }) {
             letterSpacing: 1,
           }}
           aria-pressed={autoAdvance}
+          aria-label={autoAdvance
+            ? 'Stop auto-advance'
+            : 'Start auto-advance until a decision is needed'}
           title="Skip forward automatically until a decision is needed"
         >
           {autoAdvance ? '⏩ AUTO: ON — tap to stop' : '⏩ AUTO-ADVANCE'}
@@ -105,8 +108,9 @@ export default function Sidebar({ currentScreen, setScreen }) {
                 ...(currentScreen === item.id ? styles.navActive : {}),
               }}
               aria-current={currentScreen === item.id ? 'page' : undefined}
+              aria-label={item.label}
             >
-              <span style={styles.navIcon}>{item.icon}</span>
+              <span style={styles.navIcon} aria-hidden="true">{item.icon}</span>
               <span style={styles.navLabel}>{item.label}</span>
               {item.id === 'produce' && activeProdCount > 0 && (
                 <span style={styles.badge}>{activeProdCount}</span>
@@ -134,8 +138,9 @@ export default function Sidebar({ currentScreen, setScreen }) {
               ...(currentScreen === item.id ? styles.bottomActive : {}),
             }}
             aria-current={currentScreen === item.id ? 'page' : undefined}
+              aria-label={item.label}
           >
-            <span style={styles.bottomIcon}>{item.icon}</span>
+            <span style={styles.bottomIcon} aria-hidden="true">{item.icon}</span>
             <span style={styles.bottomLabel}>{item.shortLabel}</span>
           </button>
         ))}
@@ -249,10 +254,12 @@ const styles = {
     height:     'var(--bottom-nav-h)',
     background: 'var(--bg-deep)',
     borderTop:  '3px solid var(--pink)',
+    overflowX: 'auto',
+    justifyContent: 'flex-start',
     zIndex:     100,
   },
   bottomBtn: {
-    flex:           1,
+    flex:           '0 0 56px',
     display:        'flex',
     flexDirection:  'column',
     alignItems:     'center',
@@ -264,7 +271,7 @@ const styles = {
     color:          'var(--gray)',
     padding:        '4px 2px',
     minHeight:      'var(--bottom-nav-h)',
-    fontSize:       6,
+    fontSize:       9,
   },
   bottomActive: {
     color:       'var(--pink)',
@@ -272,7 +279,7 @@ const styles = {
     borderTop:   '3px solid var(--pink)',
   },
   bottomIcon:  { fontSize: 18 },
-  bottomLabel: { fontSize: 6, letterSpacing: 1 },
+  bottomLabel: { fontSize: 8, letterSpacing: 0.5 },
 }
 
 // Inject responsive + animation CSS

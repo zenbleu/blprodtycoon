@@ -15,6 +15,8 @@ export default function ModalSystem() {
   const [modal] = state.modalQueue
   const queueLen  = state.modalQueue.length
   const prevModal = useRef(null)
+  const dialogRef = useRef(null)
+  const restoreFocusRef = useRef(null)
   const decisionRequired = isDecisionModal(modal)
 
   // Play SFX and fire confetti on every new modal
@@ -52,6 +54,74 @@ export default function ModalSystem() {
     dispatch({ type: A.POP_MODAL })
   }
 
+  // Keep keyboard users inside the active dialog and return them to the
+  // control that opened it when the queue is finished.
+  useEffect(() => {
+    if (!modal) {
+      const previous = restoreFocusRef.current
+      restoreFocusRef.current = null
+      if (previous && typeof previous.focus === 'function' && document.contains(previous)) {
+        previous.focus()
+      }
+      return undefined
+    }
+
+    if (!restoreFocusRef.current) restoreFocusRef.current = document.activeElement
+
+    const focusableSelector = [
+      'button:not([disabled])',
+      'input:not([disabled])',
+      'select:not([disabled])',
+      'textarea:not([disabled])',
+      'a[href]',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(',')
+
+    const focusFirst = () => {
+      const dialog = dialogRef.current
+      if (!dialog) return
+      const focusable = dialog.querySelectorAll(focusableSelector)
+      ;(focusable[0] || dialog).focus()
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        if (!decisionRequired) {
+          event.preventDefault()
+          dismiss()
+        }
+        return
+      }
+      if (event.key !== 'Tab') return
+
+      const dialog = dialogRef.current
+      if (!dialog) return
+      const focusable = [...dialog.querySelectorAll(focusableSelector)]
+      if (focusable.length === 0) {
+        event.preventDefault()
+        dialog.focus()
+        return
+      }
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    const frame = requestAnimationFrame(focusFirst)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      cancelAnimationFrame(frame)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [modal, decisionRequired])
+
   return (
     <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && dismiss()}>
       <div style={decisionRequired ? styles.decisionBadge : styles.infoBadge}>
@@ -77,32 +147,55 @@ export default function ModalSystem() {
         </div>
       )}
 
-      {modal.type === 'productionResult' && (
-        <ProductionResultModal data={modal.data} onClose={() => dismiss(true)} />
-      )}
-      {modal.type === 'rankUp' && (
-        <RankUpModal data={modal.data} onClose={() => dismiss(true)} />
-      )}
-      {modal.type === 'event' && (
-        <EventModal data={modal.data} onClose={() => dismiss(true)} dispatch={dispatch} state={state} />
-      )}
-      {modal.type === 'generic' && (
-        <GenericModal data={modal.data} onClose={() => dismiss(true)} />
-      )}
-      {modal.type === 'audition' && (
-        <AuditionModal data={modal.data} onClose={() => dismiss(true)} dispatch={dispatch} state={state} />
-      )}
-      {modal.type === 'actorQuitNotice' && (
-        <ActorQuitNoticeModal data={modal.data} onClose={() => dismiss(true)} />
-      )}
-      {modal.type === 'actorBurnLetter' && (
-        <ActorBurnLetterModal data={modal.data} onClose={() => dismiss(true)} />
-      )}
-      {modal.type === 'weekSummary' && (
-        <WeekSummaryModal data={modal.data} onClose={() => dismiss(true)} />
-      )}
+      <div
+        ref={dialogRef}
+        className="modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label={modalAriaLabel(modal)}
+        tabIndex={-1}
+      >
+        {modal.type === 'productionResult' && (
+          <ProductionResultModal data={modal.data} onClose={() => dismiss(true)} />
+        )}
+        {modal.type === 'rankUp' && (
+          <RankUpModal data={modal.data} onClose={() => dismiss(true)} />
+        )}
+        {modal.type === 'event' && (
+          <EventModal data={modal.data} onClose={() => dismiss(true)} dispatch={dispatch} state={state} />
+        )}
+        {modal.type === 'generic' && (
+          <GenericModal data={modal.data} onClose={() => dismiss(true)} />
+        )}
+        {modal.type === 'audition' && (
+          <AuditionModal data={modal.data} onClose={() => dismiss(true)} dispatch={dispatch} state={state} />
+        )}
+        {modal.type === 'actorQuitNotice' && (
+          <ActorQuitNoticeModal data={modal.data} onClose={() => dismiss(true)} />
+        )}
+        {modal.type === 'actorBurnLetter' && (
+          <ActorBurnLetterModal data={modal.data} onClose={() => dismiss(true)} />
+        )}
+        {modal.type === 'weekSummary' && (
+          <WeekSummaryModal data={modal.data} onClose={() => dismiss(true)} />
+        )}
+      </div>
     </div>
   )
+}
+
+function modalAriaLabel(modal) {
+  const labels = {
+    productionResult: 'Production result',
+    rankUp: 'Studio rank increase',
+    event: modal.data?.label || 'Studio event',
+    generic: modal.data?.title || 'Game notice',
+    audition: 'Audition week',
+    actorQuitNotice: 'Actor departure notice',
+    actorBurnLetter: 'Farewell letter',
+    weekSummary: 'Week summary',
+  }
+  return labels[modal.type] ?? 'Game dialog'
 }
 
 function isDecisionModal(modal) {
@@ -677,8 +770,8 @@ const auStyles = {
 function Stat({ label, value, color }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'center' }}>
-      <span style={{ fontSize: 6, color: 'var(--lav)' }}>{label}</span>
-      <span style={{ fontSize: 9, color }}>{value}</span>
+      <span style={{ fontSize: 8, color: 'var(--lav)' }}>{label}</span>
+      <span style={{ fontSize: 12, color }}>{value}</span>
     </div>
   )
 }

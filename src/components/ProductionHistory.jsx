@@ -100,7 +100,7 @@ function HistoryCard({ record }) {
   const score = record.score ?? 0
   return (
     <article className="panel" style={styles.card}>
-      <div style={styles.cardHeader}>
+      <div className="history-card-header" style={styles.cardHeader}>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={styles.title}>{type?.icon ?? '🎬'} {record.title}</div>
           <div style={styles.meta}>
@@ -113,7 +113,7 @@ function HistoryCard({ record }) {
           <div style={{ color: 'var(--gold)', fontSize: 8 }}>{scoreToStars(score)}</div>
         </div>
       </div>
-      <div style={styles.metricGrid}>
+      <div className="history-metric-grid" style={styles.metricGrid}>
         <Metric label="SCORE" value={`${score}/100`} color={GRADE_COLORS[record.grade] ?? 'var(--pink)'} />
         <Metric label="REVENUE" value={fmtMoney(record.revenue ?? 0)} color="var(--gold)" />
         <Metric label="AUDIENCE" value={record.audienceScore != null ? `${record.audienceScore}/100` : '—'} color="var(--blue)" />

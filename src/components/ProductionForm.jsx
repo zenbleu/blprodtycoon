@@ -1441,10 +1441,20 @@ function LeadMini({ actor }) {
 // Prompt 4: only shows unlocked genres; locked genres shown dimmed with 🔒
 function GenrePickModal({ current, onSelect, onClose, unlockedGenres }) {
   const unlocked = unlockedGenres ?? DEFAULT_GENRES
+  const dialogRef = useRef(null)
+  useDialogFocus(dialogRef, onClose)
   return (
     <div style={modalStyles.overlay} onClick={onClose}>
-      <div style={modalStyles.box} onClick={e => e.stopPropagation()}>
-        <div style={modalStyles.title}>🎭 SELECT GENRE</div>
+      <div
+        ref={dialogRef}
+        style={modalStyles.box}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="genre-picker-title"
+        tabIndex={-1}
+        onClick={e => e.stopPropagation()}
+      >
+        <div id="genre-picker-title" style={modalStyles.title}>🎭 SELECT GENRE</div>
         <div style={{ fontSize: 7, color: 'var(--lav)', textAlign: 'center', marginBottom: 8 }}>
           {unlocked.length}/{GENRES.length} genres unlocked · Complete productions to unlock more
         </div>
@@ -1493,10 +1503,20 @@ function GenrePickModal({ current, onSelect, onClose, unlockedGenres }) {
 // Shows all 29 themes grouped by category; locked ones are dimmed with 🔒
 function ThemePickModal({ current, onSelect, onClose, unlockedThemes }) {
   const unlocked = unlockedThemes ?? DEFAULT_THEMES
+  const dialogRef = useRef(null)
+  useDialogFocus(dialogRef, onClose)
   return (
     <div style={modalStyles.overlay} onClick={onClose}>
-      <div style={{ ...modalStyles.box, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
-        <div style={modalStyles.title}>✨ SELECT THEME</div>
+      <div
+        ref={dialogRef}
+        style={{ ...modalStyles.box, maxWidth: 420 }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="theme-picker-title"
+        tabIndex={-1}
+        onClick={e => e.stopPropagation()}
+      >
+        <div id="theme-picker-title" style={modalStyles.title}>✨ SELECT THEME</div>
         <div style={{ fontSize: 7, color: 'var(--lav)', textAlign: 'center', marginBottom: 8 }}>
           {unlocked.length}/{THEMES.length} themes unlocked · Complete productions to unlock more
         </div>
@@ -1556,6 +1576,8 @@ function SlotMachineModal({
   onSelect, onClose, unlockedGenres, unlockedMilestones, spinsLeft, onSpinUsed, onSpinAgain,
   onMultiplierAccepted, currentGenre, gameTierId, genreTrends,
 }) {
+  const dialogRef = useRef(null)
+  useDialogFocus(dialogRef, onClose)
   const unlocked   = (unlockedGenres ?? DEFAULT_GENRES).filter(g => GENRES.includes(g))
   const trendPool  = (genreTrends ?? []).filter(g => GENRES.includes(g))        // all trending genres
   const availPool  = unlocked.length > 0 ? unlocked : DEFAULT_GENRES             // unlocked genres
@@ -1780,8 +1802,16 @@ function SlotMachineModal({
 
   return (
     <div style={modalStyles.overlay} onClick={!spinning ? onClose : undefined}>
-      <div style={modalStyles.box} onClick={e => e.stopPropagation()}>
-        <div style={modalStyles.title}>🎰 RANDOM GENRE</div>
+      <div
+        ref={dialogRef}
+        style={modalStyles.box}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="slot-picker-title"
+        tabIndex={-1}
+        onClick={e => e.stopPropagation()}
+      >
+        <div id="slot-picker-title" style={modalStyles.title}>🎰 RANDOM GENRE</div>
 
         {/* Slot window */}
         <div style={modalStyles.slotWindow}>
@@ -1859,7 +1889,7 @@ const modalStyles = {
     padding:     '20px 18px',
     maxWidth:    380,
     width:       '94%',
-    maxHeight:   '85vh',
+    maxHeight:   'calc(100dvh - 20px)',
     overflowY:   'auto',
     boxShadow:   '4px 4px 0 #8A2B52',
     display:     'flex',
@@ -1889,7 +1919,7 @@ const modalStyles = {
     flexDirection: 'column',
     alignItems:    'center',
     justifyContent:'center',
-    minHeight:     'auto',
+    minHeight:     60,
     transition:    'border-color 0.15s',
     textAlign:     'center',
   },
@@ -1906,7 +1936,7 @@ const modalStyles = {
     color:       'var(--gray)',
     cursor:      'pointer',
     boxShadow:   'none',
-    minHeight:   'auto',
+    minHeight:   44,
   },
   slotWindow: {
     background:  'var(--bg-inset)',
@@ -1929,7 +1959,7 @@ const modalStyles = {
     border:      'none',
     boxShadow:   '2px 2px 0 #4a3a8a',
     cursor:      'pointer',
-    minHeight:   'auto',
+    minHeight:   44,
   },
   acceptBtn: {
     fontSize:    8,
@@ -1939,9 +1969,72 @@ const modalStyles = {
     border:      'none',
     boxShadow:   '2px 2px 0 #1a5a2a',
     cursor:      'pointer',
-    minHeight:   'auto',
+    minHeight:   44,
     fontWeight:  'bold',
   },
+}
+
+function useDialogFocus(dialogRef, onClose) {
+  const closeRef = useRef(onClose)
+
+  useEffect(() => {
+    closeRef.current = onClose
+  }, [onClose])
+
+  useEffect(() => {
+    const previous = document.activeElement
+    const focusableSelector = [
+      'button:not([disabled])',
+      'input:not([disabled])',
+      'select:not([disabled])',
+      'textarea:not([disabled])',
+      'a[href]',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(',')
+
+    const focusFirst = () => {
+      const dialog = dialogRef.current
+      if (!dialog) return
+      const focusable = dialog.querySelectorAll(focusableSelector)
+      ;(focusable[0] || dialog).focus()
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        closeRef.current()
+        return
+      }
+      if (event.key !== 'Tab') return
+      const dialog = dialogRef.current
+      if (!dialog) return
+      const focusable = [...dialog.querySelectorAll(focusableSelector)]
+      if (!focusable.length) {
+        event.preventDefault()
+        dialog.focus()
+        return
+      }
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    const frame = requestAnimationFrame(focusFirst)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      cancelAnimationFrame(frame)
+      document.removeEventListener('keydown', handleKeyDown)
+      if (previous && typeof previous.focus === 'function' && document.contains(previous)) {
+        previous.focus()
+      }
+    }
+  }, [dialogRef])
 }
 
 const styles = {

@@ -97,11 +97,12 @@ export default function TopBar() {
         ) : (
           <button
             onClick={startRename}
-            title="Click to rename studio"
+            title="Rename studio"
+            aria-label={`Rename studio. Current name: ${state.companyName}`}
             style={styles.companyBtn}
           >
             {state.companyName}
-            <span style={styles.editHint}>✏️</span>
+            <span style={styles.editHint} aria-hidden="true">✏️</span>
           </button>
         )}
         <div style={styles.yearBadge}>{currentYear}</div>
@@ -131,9 +132,9 @@ export default function TopBar() {
 
 function Stat({ label, value, color, small }) {
   return (
-    <div style={styles.statWrap}>
+    <div style={styles.statWrap} aria-label={`${label}: ${value}`}>
       <span style={styles.statLbl}>{label}</span>
-      <span style={{ ...styles.statVal, color, fontSize: small ? 8 : 11 }}>{value}</span>
+      <span style={{ ...styles.statVal, color, fontSize: small ? 10 : 13 }}>{value}</span>
     </div>
   )
 }
@@ -150,7 +151,7 @@ function TierStat({ tier, nextThresh, numericRank }) {
   return (
     <div style={{ ...styles.statWrap, minWidth: 60 }}>
       <span style={styles.statLbl}>TIER</span>
-      <span style={{ ...styles.statVal, color, fontSize: 8, whiteSpace: 'nowrap' }}>
+        <span style={{ ...styles.statVal, color, fontSize: 10, whiteSpace: 'nowrap' }}>
         {tier.label}
       </span>
       {nextThresh !== null ? (
@@ -234,7 +235,7 @@ const styles = {
     whiteSpace:  'nowrap',
   },
   saveError: {
-    fontSize: 6,
+           fontSize: 8,
     color: 'var(--red)',
     marginTop: 2,
     whiteSpace: 'nowrap',
@@ -263,12 +264,12 @@ const styles = {
     minWidth:      44,
   },
   statLbl: {
-    fontSize:     6,
+     fontSize:     8,
     color:        'var(--lav)',
     letterSpacing: 1,
   },
   statVal: {
-    fontSize:   11,
+     fontSize:   13,
     fontFamily: 'inherit',
   },
 }

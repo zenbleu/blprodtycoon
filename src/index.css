@@ -55,8 +55,8 @@ body {
   background: var(--bg);
   color: var(--white);
   font-family: 'Press Start 2P', monospace;
-  font-size: 10px;
-  line-height: 1.7;
+  font-size: 12px;
+  line-height: 1.8;
   overflow-x: hidden;
   -webkit-font-smoothing: none;
   touch-action: manipulation;
@@ -92,7 +92,7 @@ button {
   border: 3px solid var(--shadow);
   box-shadow: 0 4px 0 var(--shadow);
   padding: 10px 12px;
-  font-size: 9px;
+  font-size: 11px;
   text-align: left;
   min-height: var(--touch-min);
   min-width: var(--touch-min);
@@ -100,6 +100,17 @@ button {
   -webkit-user-select: none;
   user-select: none;
   touch-action: manipulation;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 2px var(--bg-deep), 0 0 0 5px var(--gold);
 }
 
 button:active:not(:disabled) {
@@ -147,7 +158,7 @@ button.btn-gold {
 
 .field label {
   display: block;
-  font-size: 8px;
+  font-size: 10px;
   color: var(--lav);
   margin-bottom: 6px;
   letter-spacing: 1px;
@@ -158,7 +169,7 @@ select,
 textarea {
   width: 100%;
   font-family: 'Press Start 2P', monospace;
-  font-size: 9px;
+  font-size: 11px;
   color: var(--white);
   background: var(--bg-inset);
   border: 2px solid var(--pink-dim);
@@ -171,6 +182,13 @@ select:focus,
 textarea:focus {
   outline: none;
   border-color: var(--gold);
+}
+
+input[type="text"]:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
 }
 
 input[type="range"] {
@@ -190,7 +208,7 @@ input[type="range"] {
   flex: 1 1 auto;
   text-align: center;
   padding: 9px 6px;
-  font-size: 8px;
+  font-size: 10px;
 }
 
 .seg button.sel {
@@ -208,7 +226,7 @@ input[type="range"] {
 }
 
 .panel-title {
-  font-size: 9px;
+  font-size: 11px;
   color: var(--pink);
   border-bottom: 2px solid var(--pink-dim);
   padding-bottom: 8px;
@@ -225,7 +243,7 @@ input[type="range"] {
 }
 
 .stat-bar-wrap .bar-label {
-  font-size: 7px;
+  font-size: 9px;
   color: var(--lav);
   width: 26px;
   flex-shrink: 0;
@@ -245,7 +263,7 @@ input[type="range"] {
 }
 
 .stat-bar-wrap .bar-val {
-  font-size: 7px;
+  font-size: 9px;
   color: var(--white);
   width: 22px;
   text-align: right;
@@ -293,7 +311,7 @@ input[type="range"] {
 /* ---------- Chips / Tags ---------- */
 .tag-chip {
   display: inline-block;
-  font-size: 7px;
+  font-size: 9px;
   padding: 3px 6px;
   border-radius: 2px;
   background: var(--bg-inset);
@@ -307,7 +325,7 @@ input[type="range"] {
   background: var(--bg-inset);
   border: 2px dashed var(--gold);
   padding: 12px;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 2;
   margin-top: 6px;
 }
@@ -335,6 +353,10 @@ input[type="range"] {
   padding-bottom: calc(var(--bottom-nav-h) + 16px);
 }
 
+.app-main > * {
+  min-width: 0;
+}
+
 /* Desktop: show sidebar, no bottom nav padding override */
 @media (min-width: 760px) {
   .app-main {
@@ -351,7 +373,15 @@ input[type="range"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px))
+    max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+}
+
+.modal-dialog {
+  width: min(100%, 520px);
+  max-height: calc(100dvh - 24px);
+  display: flex;
+  min-width: 0;
 }
 
 .modal-box {
@@ -361,13 +391,13 @@ input[type="range"] {
   padding: 20px;
   max-width: 480px;
   width: 100%;
-  max-height: 85vh;
+  max-height: 100%;
   overflow-y: auto;
   position: relative;
 }
 
 .modal-title {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--pink);
   border-bottom: 2px solid var(--pink-dim);
   padding-bottom: 10px;
@@ -382,7 +412,7 @@ input[type="range"] {
   border-color: var(--gray);
   font-size: 10px;
   padding: 6px 10px;
-  min-height: 36px;
+  min-height: var(--touch-min);
 }
 
 /* ---------- Toast / Notifications ---------- */
@@ -409,7 +439,7 @@ input[type="range"] {
   background: var(--bg-deep);
   border: 2px solid var(--pink);
   padding: 10px 14px;
-  font-size: 8px;
+  font-size: 10px;
   line-height: 1.8;
   box-shadow: 4px 4px 0 var(--shadow);
   animation: toast-in 0.2s ease;
@@ -487,8 +517,8 @@ body.modal-open {
 .mb-1 { margin-bottom: 6px; }
 .mb-2 { margin-bottom: 12px; }
 
-.small { font-size: 8px; }
-.tiny  { font-size: 7px; }
+.small { font-size: 10px; }
+.tiny  { font-size: 9px; }
 
 .flex { display: flex; }
 .flex-col { flex-direction: column; }
@@ -508,11 +538,51 @@ body.modal-open {
 }
 
 @media (max-width: 759px) {
+  .app-main {
+    padding: 12px;
+    padding-bottom: calc(var(--bottom-nav-h) + 16px);
+  }
+
   .mobile-next-week-container {
     display: block !important;
     padding: 10px 16px;
     background: var(--bg-deep, #140C26);
     border-bottom: 3px solid var(--shadow, #120A24);
     flex-shrink: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-backdrop {
+    padding: 10px;
+  }
+
+  .modal-dialog {
+    max-height: calc(100dvh - 20px);
+  }
+
+  .modal-box {
+    padding: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .history-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .history-card-header {
+    gap: 6px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }

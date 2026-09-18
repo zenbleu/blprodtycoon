@@ -108,6 +108,8 @@ function GameApp() {
           }}
           onClick={advanceWeek}
           disabled={advancing}
+          aria-label={advancing ? 'Waiting for week advance to finish' : 'Advance one week'}
+          aria-busy={advancing}
         >
           {advancing ? '⏳ WAIT...' : '▶ NEXT WEEK'}
         </button>
