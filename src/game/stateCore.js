@@ -43,8 +43,28 @@ export function gameReducer(state, action) {
     case A.ADD_AWARD: return { ...state, awards: state.awards + (action.amount ?? 1) }
     case A.INCREMENT_PRODS_COMPLETED: return { ...state, productionsCompleted: (state.productionsCompleted ?? 0) + (action.count ?? 1) }
     case A.UNLOCK_TIER: if (state.unlockedTiers.includes(action.tier)) return state; return { ...state, unlockedTiers: [...state.unlockedTiers, action.tier] }
-    case A.UNLOCK_GENRES: { const c = state.unlockedMilestones ?? ['Romance', 'School', 'Office']; const i = (action.genres ?? []).filter(g => !c.includes(g)); if (!i.length) return state; return { ...state, unlockedMilestones: [...c, ...i] } }
-    case A.DISCOVER_GENRE: { const c = state.unlockedGenres ?? ['Romance', 'School', 'Office']; if (c.includes(action.genre)) return state; return { ...state, unlockedGenres: [...c, action.genre] } }
+    case A.UNLOCK_GENRES: {
+      const currentGenres = state.unlockedGenres ?? ['Romance', 'School', 'Office']
+      const currentMilestones = state.unlockedMilestones ?? currentGenres
+      const additions = (action.genres ?? []).filter(g => !currentGenres.includes(g))
+      if (!additions.length) return state
+      return {
+        ...state,
+        unlockedGenres: [...currentGenres, ...additions],
+        // Keep the legacy milestone collection synchronized for slot-machine
+        // discovery and older saves that still read this field.
+        unlockedMilestones: [...new Set([...currentMilestones, ...additions])],
+      }
+    }
+    case A.DISCOVER_GENRE: {
+      const currentGenres = state.unlockedGenres ?? ['Romance', 'School', 'Office']
+      if (currentGenres.includes(action.genre)) return state
+      return {
+        ...state,
+        unlockedGenres: [...currentGenres, action.genre],
+        unlockedMilestones: [...new Set([...(state.unlockedMilestones ?? currentGenres), action.genre])],
+      }
+    }
     case A.SET_ACTORS: return { ...state, actors: action.actors }
     case A.UPDATE_ACTOR: return { ...state, actors: state.actors.map(a => { if (a.id !== action.id) return a; const u = { ...a, ...action.patch }; if (action.patch.status === 'injured' && a.status !== 'injured') u.injuredThisYear = (a.injuredThisYear ?? 0) + 1; if (action.patch.signed === false && a.signed === true) u.hasLeft = true; return u }) }
     case A.SIGN_ACTOR: return { ...state, money: state.money - action.cost, actors: state.actors.map(a => a.id === action.id ? { ...a, signed: true, status: 'available', ...startHoneymoon(a, state.week, HONEYMOON_NEW_RECRUIT_WEEKS) } : a) }

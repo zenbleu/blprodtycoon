@@ -8,7 +8,7 @@ import { useGame, A, pushToast } from '../game/state.jsx'
 import {
   PROD_TYPES, SCHEDULES, PLATFORMS, RATINGS, GENRES, GENRE_EMOJI, STORY_TYPES,
   BUDGET_TIERS, TITLE_POOL, calcCost, createProduction,
-  getComboResult, DEFAULT_GENRES,
+  getComboResult, DEFAULT_GENRES, hasScheduleConflict, normalizeRatingForPlatform,
 } from '../game/productions.js'
 import {
   THEMES, THEME_CATEGORIES, THEME_EMOJI, THEME_UNLOCK_BY_GRADE, DEFAULT_THEMES,
@@ -324,8 +324,8 @@ export default function ProductionForm({ setScreen }) {
     )
   }, [lead1, lead2])
 
-  // TV blocks R rating
-  const effectiveRating = platform === 'tv' && rating === 'r' ? 'pg13' : rating
+  // TV blocks R rating; keep the normalized value shared with createProduction.
+  const effectiveRating = normalizeRatingForPlatform(platform, rating)
 
   // Combo preview — genre×type only (theme combo revealed after filming)
   const combo = getComboResult(prodType, genre)
@@ -346,12 +346,12 @@ export default function ProductionForm({ setScreen }) {
   const clampedStart     = Math.max(weekInYear, Math.min(startWeekInYear, 52))
   const lineupEndWeek    = clampedStart + schedWeeks - 1   // last week used in year
   const actualFitsInYear = lineupEndWeek <= 52
-  const canFitInYear     = true; // Always allow starting!
-  const minScheduleWeeks = 12  // 3M is shortest
-  const anySlotLeft      = true; // Always allow scheduling!
 
   // Global week when filming actually begins (converts year-relative → global)
   const weekScheduled = yearStartGlobal + clampedStart - 1
+  const scheduleConflict = hasScheduleConflict(state.productions, weekScheduled, schedule)
+  const canFitInYear     = actualFitsInYear
+  const anySlotLeft      = !scheduleConflict
 
   // ── Genre reuse warning — 13-week cooldown from wrap/completion ──────────
   // Only completed productions (in state.history, which has weekCompleted) count.
@@ -393,6 +393,11 @@ export default function ProductionForm({ setScreen }) {
     if (!canFitInYear) {
       SFX.fail()
       pushToast(dispatch, 'Not enough weeks left this year. Choose an earlier start week or shorter schedule.', 'red')
+      return
+    }
+    if (!anySlotLeft) {
+      SFX.fail()
+      pushToast(dispatch, 'Those weeks overlap another production. Choose an empty stretch on the lineup.', 'red')
       return
     }
 
@@ -495,7 +500,7 @@ export default function ProductionForm({ setScreen }) {
             })()} wk
           </span>
           <span style={{ color: 'var(--lav)' }}>Remaining</span>
-          <span style={{ color: anySlotLeft ? 'var(--green)' : 'var(--red)', fontWeight: 'bold' }}>
+          <span style={{ color: canFitInYear && anySlotLeft ? 'var(--green)' : 'var(--red)', fontWeight: 'bold' }}>
             {52 - weekInYear + 1} wk
           </span>
         </div>
@@ -505,15 +510,21 @@ export default function ProductionForm({ setScreen }) {
           weekInYear={weekInYear}
           productions={state.productions}
           yearStartGlobal={yearStartGlobal}
-          previewStart={anySlotLeft ? clampedStart : null}
+          previewStart={canFitInYear ? clampedStart : null}
           previewWeeks={schedWeeks}
+          previewConflict={scheduleConflict}
           onWeekClick={w => { if (w >= weekInYear) setStartWeekInYear(w) }}
         />
 
         {/* Insufficient weeks warning */}
-        {!anySlotLeft && (
+        {!canFitInYear && (
           <div style={styles.lineupError}>
-            Insufficient weeks remaining this year. Wait for next year to schedule new productions.
+            This schedule crosses the year boundary. Choose an earlier start week or a shorter schedule.
+          </div>
+        )}
+        {canFitInYear && scheduleConflict && (
+          <div style={styles.lineupError}>
+            These weeks overlap another production. Choose an empty stretch on the calendar.
           </div>
         )}
       </div>
@@ -1010,7 +1021,14 @@ export default function ProductionForm({ setScreen }) {
               return (
                 <button key={p.id} type="button"
                   className={platform === p.id ? 'sel' : ''}
-                  onClick={() => { SFX.click(); setPlatform(p.id) }}
+                  onClick={() => {
+                    SFX.click()
+                    setPlatform(p.id)
+                    if (p.blocksR && rating === 'r') {
+                      setRating('pg13')
+                      pushToast(dispatch, 'TV does not support R-rated content. Rating changed to PG-13.', 'red')
+                    }
+                  }}
                   disabled={!unlocked}
                   style={!unlocked ? { opacity: 0.5, cursor: 'not-allowed', filter: 'grayscale(100%)' } : {}}
                 >
@@ -1144,9 +1162,17 @@ export default function ProductionForm({ setScreen }) {
           className="btn-primary"
           style={{ flex: 1, textAlign: 'center', fontSize: 11, padding: 16 }}
           disabled={!canAffordTotal || !lead1Id || !canFitInYear || !anySlotLeft}
-          title={!anySlotLeft ? 'Insufficient weeks remaining this year.' : !canFitInYear ? 'Schedule exceeds year boundary.' : ''}
+          title={!canFitInYear
+            ? 'Schedule exceeds year boundary.'
+            : !anySlotLeft
+              ? 'Selected weeks overlap another production.'
+              : ''}
         >
-          {anySlotLeft ? '🎬 ADD TO LINE-UP!' : '⛔ INSUFFICIENT WEEKS'}
+          {!canFitInYear
+            ? '⛔ YEAR BOUNDARY'
+            : !anySlotLeft
+              ? '⛔ WEEKS OCCUPIED'
+              : '🎬 ADD TO LINE-UP!'}
         </button>
         <button type="button"
           onClick={() => { SFX.click(); setScreen('dashboard') }}
@@ -1167,7 +1193,7 @@ const PROD_COLORS = [
   '#FF6B9D', '#6BC5FF', '#FFD700', '#90EE90', '#DA70D6',
   '#FFA07A', '#87CEEB', '#DDA0DD', '#98FB98', '#F0E68C',
 ]
-function LineupTimeline({ weekInYear, productions, yearStartGlobal, previewStart, previewWeeks, onWeekClick }) {
+function LineupTimeline({ weekInYear, productions, yearStartGlobal, previewStart, previewWeeks, previewConflict, onWeekClick }) {
   // Build a map of week (1–52) → production info
   const weekMap = {}
   productions.forEach((p, idx) => {
@@ -1205,9 +1231,9 @@ function LineupTimeline({ weekInYear, productions, yearStartGlobal, previewStart
           if (occ) {
             bg = occ.color
             border = `1px solid ${occ.color}`
-          } else if (isPreview) {
-            bg = 'rgba(255,215,0,0.25)'
-            border = '1px solid var(--gold)'
+           } else if (isPreview) {
+             bg = previewConflict ? 'rgba(242,109,109,0.25)' : 'rgba(255,215,0,0.25)'
+             border = previewConflict ? '1px solid var(--red)' : '1px solid var(--gold)'
           } else if (isPast) {
             bg = 'rgba(255,255,255,0.04)'
           } else {

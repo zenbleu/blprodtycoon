@@ -57,6 +57,14 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
     const wrappedThisWeek      = []
     const releasingThisWeek    = []
     const extraHistoryRecords  = []   // for awards: productions completing this week
+    let currentPopularity      = state.popularity ?? 0
+    let currentReputation      = state.reputation ?? 0
+    let currentProductionsCompleted = state.productionsCompleted ?? 0
+    const currentGradeCounts   = { ...(state.gradeCounts ?? {}) }
+    const currentUnlockedGenres = [...(state.unlockedGenres ?? ['Romance', 'School', 'Office'])]
+    const currentUnlockedThemes = [...(state.unlockedThemes ?? DEFAULT_THEMES)]
+    const currentHistory        = [...(state.history ?? [])]
+    const currentActors         = new Map(state.actors.map(actor => [actor.id, actor]))
 
     for (const prod of state.productions) {
       if (prod.status !== 'active') continue
@@ -126,7 +134,9 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
 
     // ── 4. Evaluate completed productions ─────────────────────────────────────
     for (const prod of completedThisWeek) {
-      const castActors = state.actors.filter(a => prod.castIds.includes(a.id))
+      const castActors = prod.castIds
+        .map(actorId => currentActors.get(actorId))
+        .filter(Boolean)
 
       // Chemistry between lead pair
       const leads   = castActors.filter(a => (prod.leadIds ?? []).includes(a.id))
@@ -137,7 +147,7 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
           : 0
 
       const chemBonus  = calcChemistryBonus(castActors)
-      const baseScore  = calcScore(prod, castActors, chemBonus, state.productionsCompleted ?? 0, rng)
+      const baseScore  = calcScore(prod, castActors, chemBonus, currentProductionsCompleted, rng)
       const comboMult  = prod.comboResult?.mult ?? 1.0
       // Apply Creative Differences quality bonus before genre reuse check
       let adjBase      = Math.round(Math.min(100, baseScore * comboMult))
@@ -149,7 +159,7 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
       // ── Genre reuse penalty — 13-week cooldown from each production's wrap ──
       // Uses weekCompleted so the clock starts when filming ends, not when episodes finish airing.
       const REUSE_COOLDOWN = 13
-      const recentGenres    = (state.history ?? [])
+      const recentGenres    = currentHistory
         .filter(h => h.genre && h.weekCompleted != null && (week - h.weekCompleted) <= REUSE_COOLDOWN)
         .map(h => h.genre)
       const genreReuseCount = recentGenres.filter(g => g === prod.genre).length
@@ -168,7 +178,7 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
         production: prod,
         score:      adjBase,
          baseScore,
-        reputation: state.reputation,
+         reputation: currentReputation,
         castActors,
         chemValue,
         tier,                // Prompt 8: pass tier for rep cap & distribution
@@ -182,8 +192,10 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
 
       // Apply stat deltas — popDelta returned from evaluateProduction is already fully trended and calculated
       dispatch({ type: A.ADD_MONEY,      amount: revenue })
+      currentReputation = clamp(currentReputation + evalResult.repDelta, 0, 100)
+      currentPopularity += evalResult.popDelta
       dispatch({ type: A.ADD_REPUTATION, amount: evalResult.repDelta })
-      dispatch({ type: A.SET_POPULARITY, value: state.popularity + evalResult.popDelta })
+      dispatch({ type: A.SET_POPULARITY, value: currentPopularity })
       if (isTrending) {
         pushEventLog(dispatch,
           `📈 "${prod.genre}" is trending! +20% pop bonus for "${prod.title}"`, 'gold', week)
@@ -195,16 +207,18 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
       for (const actor of castActors) {
         const expPatch   = grantExp(actor, evalResult.xpPerActor)
         const newChemMap = applyBondDeltas(actor, chemDeltas)
+        const actorPatch = {
+          ...expPatch,
+          chemistry_map:  newChemMap,
+          status:         'available',
+          assignedTo:     null,
+          completedProds: (actor.completedProds ?? 0) + 1,
+        }
         dispatch({
           type: A.UPDATE_ACTOR, id: actor.id,
-          patch: {
-            ...expPatch,
-            chemistry_map:  newChemMap,
-            status:         'available',
-            assignedTo:     null,
-            completedProds: (actor.completedProds ?? 0) + 1,
-          },
+          patch: actorPatch,
         })
+        currentActors.set(actor.id, { ...actor, ...actorPatch })
       }
 
       // Record completion (chemScore, productionScore, criticScore, audienceScore stored for BL Awards)
@@ -221,15 +235,23 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
       }
       dispatch({ type: A.COMPLETE_PRODUCTION, id: prod.id, record: historyRecord })
       extraHistoryRecords.push(historyRecord)
+      currentHistory.push(historyRecord)
+      currentProductionsCompleted += 1
 
       // ── Awards (avgStars ≥ 4.5) ───────────────────────────────────────────
       if (evalResult.awarded) {
         dispatch({ type: A.ADD_REPUTATION, amount: 6 })
-        dispatch({ type: A.SET_POPULARITY, value: state.popularity + evalResult.popDelta + 12000 })
+        currentReputation = clamp(currentReputation + 6, 0, 100)
+        currentPopularity += 12000
+        dispatch({ type: A.SET_POPULARITY, value: currentPopularity })
         dispatch({ type: A.ADD_MONEY, amount: 2000 })
         dispatch({ type: A.ADD_AWARD })
         for (const actor of castActors) {
           dispatch({ type: A.UPDATE_ACTOR, id: actor.id, patch: { awards: (actor.awards ?? 0) + 1 } })
+          currentActors.set(actor.id, {
+            ...currentActors.get(actor.id),
+            awards: (actor.awards ?? 0) + 1,
+          })
         }
         pushEventLog(dispatch,
           `🏆 "${prod.title}" wins an industry award! +6 rep · +₩2,000`,
@@ -244,20 +266,22 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
         for (const cActor of castActors) {
           const newH = clamp((cActor.happiness ?? 70) + happinessDelta, 0, 100)
           dispatch({ type: A.UPDATE_ACTOR, id: cActor.id, patch: { happiness: newH } })
+          currentActors.set(cActor.id, { ...currentActors.get(cActor.id), happiness: newH })
         }
       }
 
       // ── Grade count increment → count-based genre & theme unlocks ──────────
-      const newGradeCount   = ((state.gradeCounts ?? {})[evalResult.grade] ?? 0) + 1
+      const newGradeCount   = (currentGradeCounts[evalResult.grade] ?? 0) + 1
+      currentGradeCounts[evalResult.grade] = newGradeCount
       dispatch({ type: A.INCREMENT_GRADE_COUNT, grade: evalResult.grade })
       const gradeThreshold  = GENRE_UNLOCK_COUNTS[evalResult.grade]
       if (gradeThreshold && newGradeCount >= gradeThreshold) {
         const genresToUnlock = GENRE_UNLOCK_BY_GRADE[evalResult.grade] ?? []
         if (genresToUnlock.length > 0) {
           dispatch({ type: A.UNLOCK_GENRES, genres: genresToUnlock })
-          const current = state.unlockedGenres ?? ['Romance', 'School', 'Office']
-          const fresh   = genresToUnlock.filter(g => !current.includes(g))
+          const fresh   = genresToUnlock.filter(g => !currentUnlockedGenres.includes(g))
           if (fresh.length > 0) {
+            currentUnlockedGenres.push(...fresh)
             pushEventLog(dispatch,
               `🎭 Genres unlocked: ${fresh.join(', ')}! (${evalResult.grade}×${newGradeCount})`,
               'gold', week)
@@ -268,9 +292,9 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
         const themesToUnlock = THEME_UNLOCK_BY_GRADE[evalResult.grade] ?? []
         if (themesToUnlock.length > 0) {
           dispatch({ type: A.UNLOCK_THEMES, themes: themesToUnlock })
-          const currentThemes = state.unlockedThemes ?? DEFAULT_THEMES
-          const freshThemes   = themesToUnlock.filter(t => !currentThemes.includes(t))
+          const freshThemes   = themesToUnlock.filter(t => !currentUnlockedThemes.includes(t))
           if (freshThemes.length > 0) {
+            currentUnlockedThemes.push(...freshThemes)
             pushEventLog(dispatch,
               `✨ Themes unlocked: ${freshThemes.join(', ')}! (${evalResult.grade}×${newGradeCount})`,
               'gold', week)
@@ -359,7 +383,7 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
 
     // ── 5. Weekly actor tick ──────────────────────────────────────────────────
     let currentMoney = state.money;
-    for (const actor of state.actors) {
+    for (const actor of currentActors.values()) {
       if (!actor.signed) continue
       if (completedThisWeek.find(p => p.castIds.includes(actor.id))) continue
 
@@ -385,6 +409,7 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
       // Prompt 8: pass tier to weeklyActorTick for threshold scaling
       const patch = weeklyActorRecovery(actorWithResolvedActivity, tier, week)
       dispatch({ type: A.UPDATE_ACTOR, id: actor.id, patch })
+      currentActors.set(actor.id, { ...actorWithResolvedActivity, ...patch })
 
       // ── Prompt 8: Emergency save event at loyalty ≤ 10 (one-time) ────────
       const prevLoyalty = actor.loyalty ?? 60
@@ -568,8 +593,8 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
     // ── 5b. Actor tier promotion check ───────────────────────────────────────
     // Runs every week for all signed actors below Worldwide.
     // Uses the full history (including productions completed this week) so new grades count.
-    const fullHistory = [...(state.history ?? []), ...extraHistoryRecords]
-    for (const actor of state.actors) {
+    const fullHistory = currentHistory
+    for (const actor of currentActors.values()) {
       if (!actor.signed || actor.tier === 'Worldwide') continue
 
       const promoResult = checkTierPromotion(actor, fullHistory)
@@ -581,6 +606,7 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
 
       const promoPatch = applyTierPromotion(actor, rng)
       dispatch({ type: A.UPDATE_ACTOR, id: actor.id, patch: promoPatch })
+      currentActors.set(actor.id, { ...actor, ...promoPatch })
       dispatch({ type: A.SET_FLAG, key: promoFlagKey, value: week })
 
       pushEventLog(dispatch,
@@ -622,7 +648,15 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
     }
 
     // ── 5.5 Numeric rank + tier unlocks ─────────────────────────────────────
-    const numRank = computeNumericRank(state)
+    const rankState = {
+      ...state,
+      reputation: currentReputation,
+      popularity: currentPopularity,
+      productionsCompleted: currentProductionsCompleted,
+      history: currentHistory,
+      actors: [...currentActors.values()],
+    }
+    const numRank = computeNumericRank(rankState)
     if (numRank !== state.numericRank) {
       dispatch({ type: A.SET_NUMERIC_RANK, rank: numRank })
     }
@@ -743,7 +777,7 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
     }
 
     // ── 6. Label rank update ─────────────────────────────────────────────────
-    const newRank = calcRank(state.reputation, state.popularity)
+    const newRank = calcRank(currentReputation, currentPopularity)
     if (newRank.id !== state.rank) {
       dispatch({ type: A.SET_RANK, rank: newRank.id })
       pushEventLog(dispatch, `Studio ranked up to ${newRank.label}! 🎉`, 'gold', week)

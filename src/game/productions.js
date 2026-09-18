@@ -32,6 +32,11 @@ export const RATINGS = [
   { id: 'r',    label: 'R',     popMult: 0.98 },   // TV blocks R
 ]
 
+export function normalizeRatingForPlatform(platform, rating = 'pg13') {
+  const platformInfo = PLATFORMS.find(item => item.id === platform)
+  return platformInfo?.blocksR && rating === 'r' ? 'pg13' : rating
+}
+
 const PG_FRIENDLY_GENRES = new Set(['School', 'Comedy', 'Slice of Life'])
 const MATURE_GENRES = new Set(['Psychological', 'Thriller', 'Horror', 'Crime', 'Omegaverse', 'Post-Apocalyptic'])
 
@@ -569,7 +574,7 @@ export function createProduction({
     budget,           // number: budgetMult (0.5–2.5)
     schedule,         // '3m' | '6m' | '12m'
     platform:         platform ?? 'tv',
-    rating:           rating   ?? 'pg13',
+    rating:           normalizeRatingForPlatform(platform ?? 'tv', rating ?? 'pg13'),
     story:            story    ?? 'original',
     castIds:          castIds  ?? [],
     leadIds:          leadIds  ?? [],
@@ -652,6 +657,25 @@ export function tickProduction(production, rng = Math.random) {
   }
 
   return { status: 'completed' }
+}
+
+export function getProductionScheduleRange(startWeek, scheduleId) {
+  const schedule = SCHEDULES.find(item => item.id === scheduleId)
+  if (!Number.isFinite(startWeek) || !schedule) return null
+  return { start: startWeek, end: startWeek + schedule.weeks - 1 }
+}
+
+export function hasScheduleConflict(productions, startWeek, scheduleId) {
+  const nextRange = getProductionScheduleRange(startWeek, scheduleId)
+  if (!nextRange) return false
+
+  return (productions ?? []).some(production => {
+    if (production.status === 'completed' || production.phase === 'done') return false
+    const existingStart = production.weekScheduled ?? production.weekStarted
+    const existingRange = getProductionScheduleRange(existingStart, production.schedule)
+    if (!existingRange) return false
+    return nextRange.start <= existingRange.end && existingRange.start <= nextRange.end
+  })
 }
 
 function rollEpisodeRating(production, rng = Math.random) {

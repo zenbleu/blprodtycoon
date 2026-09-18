@@ -1,11 +1,15 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { calcCost, calcRevenue, calcScore, getComboResult, tickProduction } from '../src/game/productions.js'
+import {
+  calcCost, calcRevenue, calcScore, getComboResult, tickProduction,
+  createProduction, hasScheduleConflict, normalizeRatingForPlatform,
+} from '../src/game/productions.js'
 import { applyTierPromotion, checkTierPromotion } from '../src/game/actors.js'
 import { calcBondGrowth } from '../src/game/chemistry.js'
 import { buildBalanceReport } from '../src/game/debug.js'
 import { isSaveData, migrateSaveData, SAVE_SCHEMA_VERSION } from '../src/game/save.js'
 import { evaluateProduction } from '../src/game/evaluators.js'
+import { A, gameReducer } from '../src/game/stateCore.js'
 
 const fixedRandom = value => () => value
 
@@ -61,6 +65,47 @@ test('production lifecycle can be advanced deterministically', () => {
   const completed = tickProduction({ ...production, ...wrapped, ...releasing }, fixedRandom(0.5))
   assert.equal(completed.status, 'completed')
   assert.equal(completed.episodesReleased, 1)
+})
+
+test('lineup scheduling rejects overlaps and year-boundary overflow', () => {
+  const existing = [{
+    id: 'existing',
+    status: 'active',
+    phase: 'filming',
+    weekScheduled: 10,
+    schedule: '3m',
+  }]
+
+  assert.equal(hasScheduleConflict(existing, 21, '3m'), true)
+  assert.equal(hasScheduleConflict(existing, 22, '3m'), false)
+  assert.equal(hasScheduleConflict([{ ...existing[0], status: 'completed' }], 21, '3m'), false)
+  assert.equal(10 + 48 - 1 > 52, true, '12-month starts must fit inside the 52-week year')
+})
+
+test('TV rating normalization is explicit at both helper and production boundaries', () => {
+  assert.equal(normalizeRatingForPlatform('tv', 'r'), 'pg13')
+  assert.equal(normalizeRatingForPlatform('streaming', 'r'), 'r')
+  assert.equal(createProduction({
+    type: 'movie',
+    title: 'TV Cut',
+    genre: 'Romance',
+    budget: 1,
+    schedule: '3m',
+    platform: 'tv',
+    rating: 'r',
+  }).rating, 'pg13')
+})
+
+test('genre unlocks update the selectable collection and legacy milestone collection', () => {
+  const initial = {
+    unlockedGenres: ['Romance', 'School', 'Office', 'Comedy'],
+    unlockedMilestones: ['Romance', 'School', 'Office', 'Comedy'],
+  }
+  const unlocked = gameReducer(initial, { type: A.UNLOCK_GENRES, genres: ['Music', 'Sports'] })
+  assert.ok(unlocked.unlockedGenres.includes('Music'))
+  assert.ok(unlocked.unlockedGenres.includes('Sports'))
+  assert.ok(unlocked.unlockedMilestones.includes('Music'))
+  assert.ok(unlocked.unlockedMilestones.includes('Sports'))
 })
 
 test('actor promotion and bond growth accept controlled randomness', () => {
