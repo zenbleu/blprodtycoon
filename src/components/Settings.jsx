@@ -6,6 +6,7 @@ import React, { useRef, useState } from 'react'
 import { useGame, A, pushToast, INITIAL_STATE } from '../game/state.jsx'
 import { createSaveData, isSaveData } from '../game/save.js'
 import { SFX } from '../game/audio.js'
+import { useUpdates } from '../desktop/UpdateContext.jsx'
 
 
 export default function Settings() {
@@ -13,6 +14,7 @@ export default function Settings() {
   const { settings }         = state
   const fileInputRef         = useRef(null)
   const [confirmReset, setConfirmReset] = useState(false)
+  const update = useUpdates()
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
   function set(key, value) {
@@ -105,6 +107,43 @@ export default function Settings() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+      {/* ── Updates ── */}
+      <div className="panel">
+        <div className="panel-title">⬆ UPDATES</div>
+        <div style={{ fontSize: 7, color: 'var(--lav)', lineHeight: 2.1, marginBottom: 10 }}>
+          <div>INSTALLED VERSION: <span style={{ color: 'var(--pink)' }}>{update.installedVersion}</span></div>
+          {update.isDesktop ? (
+            <div>
+              {update.status === 'available' || update.status === 'downloading' || update.status === 'ready'
+                ? `AVAILABLE VERSION: ${update.latestVersion}`
+                : update.status === 'checking' ? 'CHECKING FOR UPDATES…' : update.status === 'unavailable' ? 'UPDATE CHECK UNAVAILABLE' : 'NO UPDATE AVAILABLE'}
+            </div>
+          ) : (
+            <div>WEB VERSION · DESKTOP UPDATES APPEAR IN THE WINDOWS APP</div>
+          )}
+          {update.error && <div style={{ color: 'var(--red)' }}>{update.error}</div>}
+        </div>
+        {update.isDesktop && update.status === 'downloading' && (
+          <div style={{ color: 'var(--pink)', fontSize: 8, marginBottom: 10 }}>
+            DOWNLOADING UPDATE… {update.progress}%
+          </div>
+        )}
+        {update.isDesktop && update.status === 'ready' ? (
+          <button className="btn-gold" type="button" onClick={update.installUpdate} style={btnStyle}>
+            ⟳ UPDATE NOW
+          </button>
+        ) : (
+          <button type="button" onClick={update.checkForUpdates} disabled={!update.isDesktop || update.status === 'checking'} style={btnStyle}>
+            {update.status === 'checking' ? 'CHECKING…' : 'CHECK FOR UPDATES'}
+          </button>
+        )}
+        {update.isDesktop && update.status === 'available' && (
+          <button type="button" onClick={update.downloadUpdate} style={{ ...btnStyle, marginTop: 10 }}>
+            📥 DOWNLOAD UPDATE
+          </button>
+        )}
+      </div>
 
       {/* ── Audio ── */}
       <div className="panel">
@@ -291,7 +330,7 @@ export default function Settings() {
       <div className="panel">
         <div className="panel-title">ℹ️ GAME INFO</div>
         <div style={{ fontSize: 7, color: 'var(--lav)', lineHeight: 2.5 }}>
-          <div>BL PRODUCTION TYCOON · v1.0</div>
+          <div>BL PRODUCTION TYCOON · v{update.installedVersion}</div>
           <div>Week: {state.week} · Awards: {state.awards ?? 0}</div>
           <div>Rank: #{state.numericRank ?? 50} of 50</div>
           <div>Company: {state.companyName}</div>

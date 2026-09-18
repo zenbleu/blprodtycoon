@@ -1,0 +1,78 @@
+.update-panel {
+  position: fixed;
+  right: clamp(14px, 3vw, 34px);
+  bottom: clamp(14px, 3vw, 34px);
+  z-index: 10020;
+  width: min(330px, calc(100vw - 28px));
+  padding: 16px;
+  color: #ffe8f4;
+  background: rgba(23, 9, 39, 0.96);
+  border: 2px solid #ff6b9d;
+  box-shadow: 0 0 20px rgba(255, 107, 157, 0.3), 5px 5px 0 rgba(8, 2, 14, 0.6);
+  font-family: 'Press Start 2P', monospace;
+}
+
+.update-panel-title {
+  padding-bottom: 10px;
+  color: #ffd700;
+  border-bottom: 1px solid rgba(255, 107, 157, 0.55);
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+.update-panel-message {
+  padding: 14px 0;
+  font-size: 8px;
+  line-height: 1.8;
+}
+
+.update-progress-wrap {
+  margin-bottom: 12px;
+}
+
+.update-progress-track {
+  height: 12px;
+  overflow: hidden;
+  background: #0d0518;
+  border: 2px solid #6b2060;
+}
+
+.update-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #c0406a, #ff6b9d, #ffb3d1);
+  transition: width 0.15s linear;
+}
+
+.update-progress-label {
+  padding-top: 7px;
+  color: #ffb3d1;
+  font-size: 7px;
+  text-align: right;
+}
+
+.update-button {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 8px;
+  font-family: inherit;
+  font-size: 8px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+}
+
+.update-button-primary {
+  color: #210c28;
+  background: #ffb3d1;
+  border: 2px solid #ff6b9d;
+}
+
+.update-button-secondary {
+  color: #ffe8f4;
+  background: transparent;
+  border: 1px solid #6b2060;
+}
+
+.update-button:hover,
+.update-button:focus-visible {
+  filter: brightness(1.15);
+}

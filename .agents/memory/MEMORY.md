@@ -2,3 +2,4 @@
 - [Genre unlock system](genre-unlock.md) — genres gated by production grade; unlockedGenres in state; GENRE_UNLOCK_BY_GRADE in productions.js; reuse penalty in weekAdvance.js.
 - [Theme system](theme-system.md) — 29 themes in src/game/themes.js; unlockedThemes in state; combined combo = avg(genreType + genreTheme)/2 + typeThemeBonus computed in tickProduction wrap phase.
 - [GitHub Pages assets](github-pages-assets.md) — Pages must receive hydrated media bytes; the repository’s committed LFS pointers currently reference unavailable objects.
+- [Desktop packaging](desktop-packaging.md) — Electron Builder requires a declared main entry and rejects custom keys inside its validated build configuration.

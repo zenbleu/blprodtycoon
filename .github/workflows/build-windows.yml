@@ -1,0 +1,63 @@
+name: Build Windows desktop release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Set build version
+        shell: bash
+        run: |
+          node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('package.json','utf8')); p.version=p.version+'-build.'+process.env.GITHUB_RUN_NUMBER; fs.writeFileSync('package.json', JSON.stringify(p, null, 2)+'\\n')"
+
+      - name: Build portable application
+        run: pnpm run desktop:build
+
+      - name: Create update metadata
+        run: node scripts/create-desktop-release.mjs
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+
+      - name: Create primary ZIP artifact
+        shell: pwsh
+        run: Compress-Archive -Path release/BL-Production-Tycoon.exe -DestinationPath release/BL-Production-Tycoon.zip -Force
+
+      - name: Publish latest release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-latest
+          name: BL Production Tycoon — Latest Windows build
+          body: The ZIP contains the standalone offline Windows application.
+          files: |
+            release/BL-Production-Tycoon.zip
+            release/BL-Production-Tycoon.exe
+            release/latest.json
+          overwrite_files: true
+          make_latest: false

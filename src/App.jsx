@@ -23,6 +23,8 @@ import Confetti from './components/Confetti.jsx'
 import AwardsCeremony from './components/AwardsCeremony.jsx'
 import { setSfxEnabled } from './game/audio.js'
 import { buildBalanceReport } from './game/debug.js'
+import { UpdateProvider } from './desktop/UpdateContext.jsx'
+import UpdatePanel from './components/UpdatePanel.jsx'
 
 function GameApp() {
   const { state } = useGame()
@@ -136,13 +138,14 @@ export default function App() {
   // Stable ref so LoadingScreen's timer effect never restarts due to prop identity change
   const onLoadComplete = React.useRef(() => setAppLoading(false)).current
   return (
-    <>
+    <UpdateProvider>
       {appLoading && (
         <LoadingScreen onComplete={onLoadComplete} />
       )}
       <GameProvider>
         <GameApp />
       </GameProvider>
-    </>
+      <UpdatePanel />
+    </UpdateProvider>
   )
 }

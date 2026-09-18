@@ -1,14 +1,18 @@
 {
   "name": "bl-production-tycoon",
   "version": "1.0.0",
+  "description": "BL Production Tycoon offline desktop game",
   "private": true,
   "type": "module",
+  "main": "desktop/main.cjs",
   "packageManager": "pnpm@9.15.9",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test tests"
+    "test": "node --test tests",
+    "desktop:dev": "pnpm run build && electron desktop/main.cjs",
+    "desktop:build": "pnpm run build && electron-builder --win portable"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.2",
@@ -25,6 +29,35 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
+    "electron": "^44.4.2",
+    "electron-builder": "^26.15.3",
     "vite": "^5.4.1"
+  },
+  "build": {
+    "appId": "com.zenbleu.blproductiontycoon",
+    "productName": "BL Production Tycoon",
+    "executableName": "BL-Production-Tycoon",
+    "files": [
+      "dist/**/*",
+      "desktop/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "BL-Production-Tycoon.exe"
+    }
   }
 }

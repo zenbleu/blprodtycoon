@@ -42,6 +42,9 @@ missing image.
 ## GitHub Pages
 `.github/workflows/deploy.yml` builds with pnpm and publishes `dist/` using the official Pages artifact/deploy actions. The workflow sets `VITE_BASE_PATH` to the repository name so Pages uses the project-site path (for example, `/blprodtycoon/`), while local previews keep Vite's relative `./` base. Public assets are resolved through `src/lib/assets.js` rather than root-relative URLs.
 
+## Windows desktop release
+The same Vite build is packaged as a portable Electron application with `pnpm run desktop:build`. The desktop shell loads the bundled `dist/index.html` from disk, so gameplay, saves, and assets work offline. It checks the `desktop-latest` GitHub Release manifest and downloads the matching executable when an update is available. The Windows GitHub Actions workflow publishes `BL-Production-Tycoon.zip` (one executable at its root), the executable used by the updater, and `latest.json`.
+
 ## User preferences
 - Mobile-first, touch-friendly (thumb-sized buttons, no hover-only interactions)
 - Pixel/retro aesthetic with scanline overlay
