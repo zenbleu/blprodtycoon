@@ -4,7 +4,7 @@ import {
   calcCost, calcRevenue, calcScore, getComboResult, tickProduction,
   createProduction, hasScheduleConflict, normalizeRatingForPlatform,
 } from '../src/game/productions.js'
-import { applyTierPromotion, checkTierPromotion } from '../src/game/actors.js'
+import { applyTierPromotion, checkTierPromotion, grantExp, xpToNextLevel } from '../src/game/actors.js'
 import { calcBondGrowth } from '../src/game/chemistry.js'
 import { buildBalanceReport } from '../src/game/debug.js'
 import { isSaveData, migrateSaveData, SAVE_SCHEMA_VERSION } from '../src/game/save.js'
@@ -126,6 +126,14 @@ test('actor promotion and bond growth accept controlled randomness', () => {
   assert.deepEqual(calcBondGrowth(cast, 80, 1, fixedRandom(0)), calcBondGrowth(cast, 80, 1, fixedRandom(0)))
 })
 
+test('actor XP is lifetime progress and raises visible levels', () => {
+  const firstStep = xpToNextLevel(1)
+  const actor = { level: 1, exp: firstStep - 1 }
+  const patch = grantExp(actor, 1)
+  assert.equal(patch.exp, firstStep)
+  assert.equal(patch.level, 2)
+})
+
 test('save migration versions legacy saves and rejects future schemas', () => {
   const legacy = migrateSaveData({ week: 4, actors: [], history: [] })
   assert.equal(legacy.schemaVersion, SAVE_SCHEMA_VERSION)
@@ -187,6 +195,7 @@ test('production evaluation explains the major strategic contributors', () => {
   assert.ok(ids.includes('trend'))
   assert.ok(ids.includes('reuse'))
   assert.ok(ids.includes('platform'))
+  assert.ok(result.famePerActor > 0)
 })
 
 test('promotion requirements remain gated until all criteria are met', () => {

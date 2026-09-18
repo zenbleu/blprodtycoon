@@ -210,6 +210,7 @@ function ProductionResultModal({ data, onClose }) {
           <Stat label="REP Δ"    value={delta(ev.repDelta)}      color={ev.repDelta >= 0 ? 'var(--green)' : 'var(--red)'} />
           <Stat label="POP Δ"    value={`+${(ev.popDelta ?? 0).toLocaleString()}`} color="var(--blue)" />
           <Stat label="XP"       value={`+${ev.xpPerActor ?? 0}/actor`} color="var(--lav)" />
+          <Stat label="FAME"     value={`+${(ev.famePerActor ?? 0).toLocaleString()}/actor`} color="var(--gold)" />
         </div>
 
         {ev.resultBreakdown?.length > 0 && (

@@ -327,8 +327,10 @@ export default function ProductionForm({ setScreen }) {
   // TV blocks R rating; keep the normalized value shared with createProduction.
   const effectiveRating = normalizeRatingForPlatform(platform, rating)
 
-  // Combo preview — genre×type only (theme combo revealed after filming)
+  // Phase 2: show qualitative planning signals before commitment while keeping
+  // the final score and critic rolls discoverable.
   const combo = getComboResult(prodType, genre)
+  const themeCombo = getThemeComboResult(genre, theme, genreMultiplier >= 1.3)
 
   // Genre trends: cap to current tier's count so display & slot machine stay in sync
   const TREND_COUNTS_BY_TIER = { rookie: 3, rising: 4, popular: 5, worldwide: 6 }
@@ -358,6 +360,11 @@ export default function ProductionForm({ setScreen }) {
   // In-progress productions that are still filming/airing are intentionally excluded
   // so the cooldown starts from the moment the previous production wrapped.
   const REUSE_COOLDOWN_WEEKS = 13
+  const recentReuseCount = (state.history ?? []).filter(h =>
+    h.genre === genre &&
+    h.weekCompleted != null &&
+    (state.week - h.weekCompleted) <= REUSE_COOLDOWN_WEEKS
+  ).length
   const isGenreReused = (state.history ?? []).some(h =>
     h.genre === genre &&
     h.weekCompleted != null &&
@@ -375,6 +382,30 @@ export default function ProductionForm({ setScreen }) {
   const isEffectivelyFixed = alreadyFixedCP || (cpFixed && fixedCpAllowed)
   const totalCost     = cost + (cpFixed && fixedCpAllowed && !alreadyFixedCP ? fixedCpPrice : 0)
   const canAffordTotal = state.money >= totalCost
+  const isFirstProduction = state.history.length === 0 && state.productions.length === 0
+  const trendActive = displayedGenreTrends.includes(genre)
+  const reusePenalty = recentReuseCount >= 2 ? 25 : recentReuseCount === 1 ? 15 : 0
+
+  function applyStarterSetup() {
+    const first = availableActors.find(a => a.id === 1) ?? availableActors[0]
+    const second = availableActors.find(a => a.id === 3 && a.id !== first?.id)
+      ?? availableActors.find(a => a.id !== first?.id)
+    SFX.confirm()
+    setTitle('First Take Together')
+    setProdType('mini_series')
+    setGenre('Romance')
+    setTheme('Slow Burn')
+    setStory('original')
+    setSchedule('3m')
+    setPlatform('tv')
+    setRating('pg13')
+    setBudgetMult(1)
+    setStartWeekInYear(weekInYear)
+    setLead1Id(first ? String(first.id) : '')
+    setLead2Id(second ? String(second.id) : '')
+    setCpEdited(false)
+    pushToast(dispatch, 'Starter setup applied. Review the cost, then add it to the line-up.', 'green')
+  }
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -528,6 +559,26 @@ export default function ProductionForm({ setScreen }) {
           </div>
         )}
       </div>
+
+      {isFirstProduction && (
+        <div className="panel" style={styles.firstRunPanel}>
+          <div className="panel-title" style={{ color: 'var(--gold)' }}>🌱 FIRST PRODUCTION GUIDE</div>
+          <div style={{ fontSize: 7.5, color: 'var(--white)', lineHeight: 1.9 }}>
+            Start with a short Mini Series, a familiar Romance genre, a standard budget, and two Rookie leads.
+            This is a low-risk way to learn the loop: choose a cast, check the brief below, add the production,
+            then advance weeks until the result screen appears.
+          </div>
+          <div style={styles.firstRunSteps}>
+            <span>1. Use the starter setup</span>
+            <span>2. Check total cost</span>
+            <span>3. Add to line-up</span>
+            <span>4. Read the critique</span>
+          </div>
+          <button type="button" className="btn-gold" onClick={applyStarterSetup} style={{ width: '100%', textAlign: 'center', fontSize: 8, padding: 10 }}>
+            ✨ USE SAFE STARTER SETUP
+          </button>
+        </div>
+      )}
 
       {/* ── Title ─────────────────────────────────────────────────────────── */}
       <div className="panel">
@@ -686,6 +737,40 @@ export default function ProductionForm({ setScreen }) {
           >
             ✨ Select Theme
           </button>
+        </div>
+
+        <div style={styles.previewPanel}>
+          <div style={styles.previewTitle}>🔎 PRE-PRODUCTION BRIEF</div>
+          <div style={styles.previewGrid}>
+            <PreviewSignal
+              label="FORMAT × GENRE"
+              value={`${combo.emoji} ${combo.label}`}
+              detail={combo.label === 'PERFECT' ? 'Strong format match' : combo.label === 'BAD FIT' ? 'Risky format match' : 'Workable match'}
+              tone={combo.label === 'PERFECT' ? 'var(--gold)' : combo.label === 'BAD FIT' ? 'var(--red)' : 'var(--green)'}
+            />
+            <PreviewSignal
+              label="GENRE × THEME"
+              value={`${themeCombo.emoji} ${themeCombo.fitLabel}`}
+              detail={themeCombo.fitLabel === 'Perfect Fit' ? 'Strong creative synergy' : themeCombo.fitLabel === 'Bad Fit' ? 'Expect a weaker fit' : 'Usable, not exceptional'}
+              tone={themeCombo.fitLabel === 'Perfect Fit' ? 'var(--gold)' : themeCombo.fitLabel === 'Bad Fit' ? 'var(--red)' : 'var(--green)'}
+            />
+            <PreviewSignal
+              label="THIS YEAR"
+              value={trendActive ? '📈 TRENDING' : '○ NORMAL'}
+              detail={trendActive ? '+8 audience at release' : 'No current genre trend'}
+              tone={trendActive ? 'var(--gold)' : 'var(--lav)'}
+            />
+            <PreviewSignal
+              label="FRESHNESS"
+              value={reusePenalty ? `⚠️ −${reusePenalty}% risk` : '✨ FRESH'}
+              detail={reusePenalty ? `${recentReuseCount} recent ${genre} production${recentReuseCount === 1 ? '' : 's'} in the cooldown window` : 'No recent genre penalty'}
+              tone={reusePenalty ? 'var(--red)' : 'var(--green)'}
+            />
+          </div>
+          <div style={{ fontSize: 6.5, color: 'var(--gray)', marginTop: 7, lineHeight: 1.6 }}>
+            These are planning signals, not a guaranteed grade. Cast skill, chemistry, schedule, budget, platform,
+            and critic rolls still affect the final result.
+          </div>
         </div>
 
         {/* Genre pick modal */}
@@ -2012,4 +2097,43 @@ const styles = {
     flexDirection: 'column',
     gap: 3,
   },
+  firstRunPanel: {
+    border: '2px solid var(--gold)',
+    background: 'rgba(255,215,0,0.05)',
+  },
+  firstRunSteps: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 5,
+    margin: '9px 0',
+    color: 'var(--lav)',
+    fontSize: 6.5,
+  },
+  previewPanel: {
+    marginTop: 10,
+    padding: 9,
+    background: 'var(--bg-inset)',
+    border: '2px solid var(--blue)',
+  },
+  previewTitle: {
+    color: 'var(--blue)',
+    fontSize: 7,
+    letterSpacing: 1,
+    marginBottom: 7,
+  },
+  previewGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 6,
+  },
+}
+
+function PreviewSignal({ label, value, detail, tone }) {
+  return (
+    <div style={{ border: '1px solid var(--shadow)', padding: 6, minWidth: 0 }}>
+      <div style={{ fontSize: 5.5, color: 'var(--lav)', letterSpacing: 0.5 }}>{label}</div>
+      <div style={{ fontSize: 7.5, color: tone, fontWeight: 'bold', margin: '4px 0' }}>{value}</div>
+      <div style={{ fontSize: 6, color: 'var(--gray)', lineHeight: 1.4 }}>{detail}</div>
+    </div>
+  )
 }

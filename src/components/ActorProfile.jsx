@@ -4,7 +4,10 @@
  */
 import React, { useMemo, useState, useCallback } from 'react'
 import { useGame, A } from '../game/state.jsx'
-import { SKILL_KEYS, SKILL_LABELS, STATUS_LABEL, STATUS_COLOR, TIER_COLOR, moodEmoji, actorDisplayName } from '../game/actors.js'
+import {
+  SKILL_KEYS, SKILL_LABELS, STATUS_LABEL, STATUS_COLOR, TIER_COLOR,
+  moodEmoji, actorDisplayName, checkTierPromotion, TIER_PROMOTION_REQ, xpToNextLevel,
+} from '../game/actors.js'
 import { getChem, chemTier, bondKey } from '../game/chemistry.js'
 import { SFX } from '../game/audio.js'
 import { ActorPortrait } from './ActorRoster.jsx'
@@ -80,6 +83,8 @@ export default function ActorProfile({ actorId, onBack }) {
   const status     = actor.status ?? (isLocked ? 'locked' : 'available')
   const tierColor  = TIER_COLOR[actor.tier] ?? 'var(--lav)'
   const mood       = moodEmoji(actor.happiness ?? 70)
+  const promotion  = checkTierPromotion(actor, state.history)
+  const promotionReq = TIER_PROMOTION_REQ[actor.tier]
 
   // Productions this actor appeared in
   const appearances = useMemo(
@@ -230,6 +235,43 @@ export default function ActorProfile({ actorId, onBack }) {
           <div style={{ fontSize: 7, color: 'var(--lav)', marginTop: 8 }}>
             Sign cost: ₩{(actor.signCost ?? 0).toLocaleString()}
           </div>
+        </div>
+      )}
+
+      {!isLocked && (
+        <div className="panel">
+          <div className="panel-title">📈 CAREER PROGRESS</div>
+          <div style={styles.progressIntro}>
+            Productions build this actor’s career. XP raises level; fame, grades, awards, happiness, and loyalty
+            determine when the next tier promotion becomes available.
+          </div>
+          <div style={styles.careerGrid}>
+            <CareerStat label="LEVEL" value={actor.level ?? 1} color="var(--blue)" />
+            <CareerStat label="XP" value={(actor.exp ?? 0).toLocaleString()} color="var(--lav)" />
+            <CareerStat label="FAME" value={(actor.fame ?? 0).toLocaleString()} color="var(--gold)" />
+            <CareerStat label="LOYALTY" value={`${actor.loyalty ?? 0}/100`} color="var(--pink)" />
+            <CareerStat label="HAPPINESS" value={`${actor.happiness ?? 0}/100`} color="var(--green)" />
+          </div>
+          {promotionReq ? (
+            <>
+              <div style={{ fontSize: 7, color: 'var(--gold)', marginTop: 10 }}>
+                NEXT: {promotionReq.nextTier}
+              </div>
+              <div style={styles.requirementList}>
+                {promotion.unmet.map(item => <span key={item} style={{ color: 'var(--lav)' }}>□ {item}</span>)}
+                {promotion.unmet.length === 0 && (
+                  <span style={{ color: 'var(--green)' }}>✓ All requirements met — advance a week to resolve the promotion.</span>
+                )}
+              </div>
+              <div style={{ fontSize: 6.5, color: 'var(--gray)', marginTop: 6 }}>
+                Current level {actor.level ?? 1} · next XP step {xpToNextLevel(actor.level ?? 1).toLocaleString()}
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: 7, color: 'var(--gold)', marginTop: 9 }}>
+              ✦ Worldwide is the maximum actor tier.
+            </div>
+          )}
         </div>
       )}
 
@@ -478,4 +520,32 @@ const styles = {
     padding:    '5px 0',
     borderBottom: '1px solid var(--shadow)',
   },
+  progressIntro: {
+    fontSize: 7,
+    color: 'var(--lav)',
+    lineHeight: 1.7,
+    marginBottom: 8,
+  },
+  careerGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+    gap: 5,
+  },
+  requirementList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 3,
+    marginTop: 6,
+    fontSize: 6.5,
+    lineHeight: 1.5,
+  },
+}
+
+function CareerStat({ label, value, color }) {
+  return (
+    <div style={{ background: 'var(--bg-inset)', border: '1px solid var(--shadow)', padding: 6, minWidth: 0 }}>
+      <div style={{ fontSize: 5.5, color: 'var(--lav)' }}>{label}</div>
+      <div style={{ fontSize: 7.5, color, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</div>
+    </div>
+  )
 }

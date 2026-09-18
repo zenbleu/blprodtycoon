@@ -485,7 +485,17 @@ export const weeklyActorRecovery = weeklyActorTick
 
 // ─── XP / level ───────────────────────────────────────────────────────────────
 export function grantExp(actor, amount) {
-  return { exp: (actor.exp ?? 0) + (amount ?? 0), level: actor.level ?? 1 }
+  const exp = (actor.exp ?? 0) + (amount ?? 0)
+  let level = Math.max(1, actor.level ?? 1)
+  let spent = 0
+  // XP remains a lifetime total for promotion requirements. Level thresholds
+  // are cumulative so each level is a visible payoff without resetting progress.
+  while (exp >= spent + xpToNextLevel(level)) {
+    spent += xpToNextLevel(level)
+    level += 1
+    if (level > 99) break
+  }
+  return { exp, level }
 }
 
 export function xpToNextLevel(level) {

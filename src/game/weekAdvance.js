@@ -213,6 +213,7 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
           status:         'available',
           assignedTo:     null,
           completedProds: (actor.completedProds ?? 0) + 1,
+          fame:           (actor.fame ?? 0) + (evalResult.famePerActor ?? 0),
         }
         dispatch({
           type: A.UPDATE_ACTOR, id: actor.id,

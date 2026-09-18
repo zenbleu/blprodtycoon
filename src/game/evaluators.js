@@ -195,6 +195,10 @@ export function evaluateProduction({
     repDelta:      Math.round(critiqueResult.repDelta * platformRepMult),
     popDelta,
     xpPerActor:    castXpAward(criticScore, production.weeksTotal, production.type),
+    // Fame is the actor-facing career reward. It is intentionally based on both
+    // critic and audience reception so a high-quality niche project still helps
+    // a career while broad reach remains valuable.
+    famePerActor:  Math.round(criticScore * 30 + audienceScore * 20),
 
     // Four critics detail
     critics:       critiqueResult.critics,
