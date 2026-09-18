@@ -17,6 +17,7 @@ import Settings from './components/Settings.jsx'
 import CompanyStatus from './components/CompanyStatus.jsx'
 import FreeAgentsPool from './components/FreeAgentsPool.jsx'
 import PlayerGuide from './components/PlayerGuide.jsx'
+import ProductionHistory from './components/ProductionHistory.jsx'
 import ModalSystem from './components/ModalSystem.jsx'
 import Confetti from './components/Confetti.jsx'
 import AwardsCeremony from './components/AwardsCeremony.jsx'
@@ -84,6 +85,7 @@ function GameApp() {
       case 'company':      return <CompanyStatus setScreen={setScreen} />
       case 'freeagents':   return <FreeAgentsPool />
       case 'guide':        return <PlayerGuide />
+      case 'history':      return <ProductionHistory />
       case 'settings':     return <Settings />
       default:             return <Dashboard setScreen={setScreen} />
     }

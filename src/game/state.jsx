@@ -41,10 +41,13 @@ export const INITIAL_STATE = {
   rivals:        [],
   awardsPhase:   null,
   awardsData:    null,
+  weekSummary:   null,
   productionsCompleted: 0,
   settings: { sfxOn: true, scanlines: true, animSpeed: 'normal' },
   flags:         {},
   lastSaved:     null,
+  saveStatus:    'idle',
+  saveError:     null,
 }
 
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)) }
@@ -54,10 +57,30 @@ const GameContext = createContext(null)
 export function GameProvider({ children }) {
   const [state, dispatch] = useReducer(gameReducer, INITIAL_STATE)
   const saveTimer = useRef(null)
+  const lastSaveSignature = useRef(null)
   useEffect(() => {
     if (!state.started) return
+    // Runtime save indicators must not themselves cause an autosave loop.
+    const saveSignature = JSON.stringify({
+      ...state,
+      lastSaved: null,
+      saveStatus: null,
+      saveError: null,
+    })
+    if (saveSignature === lastSaveSignature.current) return
+    lastSaveSignature.current = saveSignature
     clearTimeout(saveTimer.current)
-      saveTimer.current = setTimeout(() => { try { localStorage.setItem('bl_tycoon_save', JSON.stringify(createSaveData(state))); dispatch({ type: A.MARK_SAVED, ts: Date.now() }) } catch (e) { console.warn('Auto-save failed:', e) } }, 1000)
+    saveTimer.current = setTimeout(() => {
+      try {
+        dispatch({ type: A.SET_SAVE_STATUS, status: 'saving', error: null })
+        localStorage.setItem('bl_tycoon_save', JSON.stringify(createSaveData(state)))
+        dispatch({ type: A.MARK_SAVED, ts: Date.now() })
+        dispatch({ type: A.SET_SAVE_STATUS, status: 'saved', error: null })
+      } catch (e) {
+        console.warn('Auto-save failed:', e)
+        dispatch({ type: A.SET_SAVE_STATUS, status: 'error', error: 'Autosave failed. Export a save from Settings.' })
+      }
+    }, 1000)
     return () => clearTimeout(saveTimer.current)
   }, [state])
   return React.createElement(GameContext.Provider, { value: { state, dispatch } }, children)

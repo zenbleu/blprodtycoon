@@ -59,6 +59,9 @@ export function migrateSaveData(saveData) {
     unlockedThemes: Array.isArray(saveData.unlockedThemes) ? saveData.unlockedThemes : DEFAULT_THEMES,
     awardsPhase: null,
     awardsData: null,
+    weekSummary: saveData.weekSummary ?? null,
+    saveStatus: 'idle',
+    saveError: null,
   }
 }
 

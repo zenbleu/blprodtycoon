@@ -108,6 +108,12 @@ export default function TopBar() {
         {savedTime && (
           <div style={styles.savedHint}>saved {savedTime}</div>
         )}
+        {state.saveStatus === 'error' && (
+          <div role="alert" style={styles.saveError}>⚠ AUTOSAVE FAILED</div>
+        )}
+        {state.saveStatus === 'saving' && (
+          <div style={styles.saveSaving}>saving…</div>
+        )}
       </div>
 
       {/* Stats — horizontal scroll on mobile */}
@@ -226,6 +232,18 @@ const styles = {
     color:       'var(--gray)',
     marginTop:   2,
     whiteSpace:  'nowrap',
+  },
+  saveError: {
+    fontSize: 6,
+    color: 'var(--red)',
+    marginTop: 2,
+    whiteSpace: 'nowrap',
+  },
+  saveSaving: {
+    fontSize: 6,
+    color: 'var(--gold)',
+    marginTop: 2,
+    whiteSpace: 'nowrap',
   },
   statsScroll: {
     display:    'flex',

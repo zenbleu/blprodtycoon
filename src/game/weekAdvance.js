@@ -57,6 +57,11 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
     const wrappedThisWeek      = []
     const releasingThisWeek    = []
     const extraHistoryRecords  = []   // for awards: productions completing this week
+    const weeklyResults        = []
+    const weeklyUnlocks        = []
+    const weeklyActorRewards   = []
+    let knownMoneyDelta        = 0
+    let knownAwardsDelta       = 0
     let currentPopularity      = state.popularity ?? 0
     let currentReputation      = state.reputation ?? 0
     let currentProductionsCompleted = state.productionsCompleted ?? 0
@@ -192,6 +197,7 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
 
       // Apply stat deltas — popDelta returned from evaluateProduction is already fully trended and calculated
       dispatch({ type: A.ADD_MONEY,      amount: revenue })
+       knownMoneyDelta += revenue
       currentReputation = clamp(currentReputation + evalResult.repDelta, 0, 100)
       currentPopularity += evalResult.popDelta
       dispatch({ type: A.ADD_REPUTATION, amount: evalResult.repDelta })
@@ -221,6 +227,14 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
         })
         currentActors.set(actor.id, { ...actor, ...actorPatch })
       }
+       weeklyActorRewards.push({
+         title: prod.title,
+         actors: castActors.map(actor => ({
+           name: actorDisplayName(actor),
+           xp: evalResult.xpPerActor ?? 0,
+           fame: evalResult.famePerActor ?? 0,
+         })),
+       })
 
       // Record completion (chemScore, productionScore, criticScore, audienceScore stored for BL Awards)
       const historyRecord = {
@@ -238,6 +252,14 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
       extraHistoryRecords.push(historyRecord)
       currentHistory.push(historyRecord)
       currentProductionsCompleted += 1
+       weeklyResults.push({
+         title: prod.title,
+         grade: evalResult.grade,
+         score: finalScore,
+         revenue,
+         repDelta: evalResult.repDelta,
+         popDelta: evalResult.popDelta,
+       })
 
       // ── Awards (avgStars ≥ 4.5) ───────────────────────────────────────────
       if (evalResult.awarded) {
@@ -246,7 +268,9 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
         currentPopularity += 12000
         dispatch({ type: A.SET_POPULARITY, value: currentPopularity })
         dispatch({ type: A.ADD_MONEY, amount: 2000 })
+         knownMoneyDelta += 2000
         dispatch({ type: A.ADD_AWARD })
+         knownAwardsDelta += 1
         for (const actor of castActors) {
           dispatch({ type: A.UPDATE_ACTOR, id: actor.id, patch: { awards: (actor.awards ?? 0) + 1 } })
           currentActors.set(actor.id, {
@@ -283,6 +307,7 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
           const fresh   = genresToUnlock.filter(g => !currentUnlockedGenres.includes(g))
           if (fresh.length > 0) {
             currentUnlockedGenres.push(...fresh)
+            weeklyUnlocks.push({ kind: 'Genres', items: fresh })
             pushEventLog(dispatch,
               `🎭 Genres unlocked: ${fresh.join(', ')}! (${evalResult.grade}×${newGradeCount})`,
               'gold', week)
@@ -296,6 +321,7 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
           const freshThemes   = themesToUnlock.filter(t => !currentUnlockedThemes.includes(t))
           if (freshThemes.length > 0) {
             currentUnlockedThemes.push(...freshThemes)
+            weeklyUnlocks.push({ kind: 'Themes', items: freshThemes })
             pushEventLog(dispatch,
               `✨ Themes unlocked: ${freshThemes.join(', ')}! (${evalResult.grade}×${newGradeCount})`,
               'gold', week)
@@ -398,6 +424,7 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
         } else {
           currentMoney -= cost
           dispatch({ type: A.ADD_MONEY, amount: -cost })
+          knownMoneyDelta -= cost
           const actLabel = activeSubActivity === 'training' ? 'Acting Masterclass' : 'Fan Meeting'
           pushEventLog(dispatch, `🏃 ${actorDisplayName(actor)} participated in ${actLabel} (−₩${cost})`, '', week)
         }
@@ -885,6 +912,28 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
     }
 
     // ── 8. Advance week ───────────────────────────────────────────────────────
+    const weeklySummary = {
+        week,
+        nextWeek: week + 1,
+        completed: weeklyResults,
+        wrapped: wrappedThisWeek.map(prod => prod.title),
+        releasedEpisodes: releasingThisWeek.map(prod => ({
+          title: prod.title,
+          episode: prod.episodesReleased,
+          rating: prod.episodeRatings?.[prod.episodesReleased - 1] ?? null,
+        })),
+        changes: {
+          money: knownMoneyDelta,
+          reputation: currentReputation - (state.reputation ?? 0),
+          popularity: currentPopularity - (state.popularity ?? 0),
+          awards: knownAwardsDelta,
+        },
+        unlocks: weeklyUnlocks,
+        actorRewards: weeklyActorRewards,
+        note: 'All scheduled production results are collected here before you plan the next week.',
+    }
+    dispatch({ type: A.SET_WEEK_SUMMARY, summary: weeklySummary })
+    dispatch({ type: A.PUSH_MODAL, modal: { type: 'weekSummary', data: weeklySummary } })
     dispatch({ type: A.ADVANCE_WEEK })
     pushToast(dispatch, `Week ${state.week + 1} begins.`)
 

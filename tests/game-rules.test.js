@@ -108,6 +108,17 @@ test('genre unlocks update the selectable collection and legacy milestone collec
   assert.ok(unlocked.unlockedMilestones.includes('Sports'))
 })
 
+test('weekly summaries are stored as the latest readable checkpoint', () => {
+  const summary = {
+    week: 7,
+    nextWeek: 8,
+    completed: [{ title: 'A', grade: 'B', score: 70 }],
+    changes: { money: 1200, reputation: 2, popularity: 400, awards: 0 },
+  }
+  const next = gameReducer({}, { type: A.SET_WEEK_SUMMARY, summary })
+  assert.deepEqual(next.weekSummary, summary)
+})
+
 test('actor promotion and bond growth accept controlled randomness', () => {
   const actor = {
     id: 1,

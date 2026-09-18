@@ -15,6 +15,7 @@ export default function ModalSystem() {
   const [modal] = state.modalQueue
   const queueLen  = state.modalQueue.length
   const prevModal = useRef(null)
+  const decisionRequired = isDecisionModal(modal)
 
   // Play SFX and fire confetti on every new modal
   useEffect(() => {
@@ -45,13 +46,17 @@ export default function ModalSystem() {
 
   if (!modal) return null
 
-  function dismiss() {
+  function dismiss(force = false) {
+    if (decisionRequired && !force) return
     SFX.click()
     dispatch({ type: A.POP_MODAL })
   }
 
   return (
     <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && dismiss()}>
+      <div style={decisionRequired ? styles.decisionBadge : styles.infoBadge}>
+        {decisionRequired ? '⚠ CHOICE REQUIRED' : 'ⓘ INFORMATION'}
+      </div>
 
       {/* Queue counter badge */}
       {queueLen > 1 && (
@@ -73,28 +78,37 @@ export default function ModalSystem() {
       )}
 
       {modal.type === 'productionResult' && (
-        <ProductionResultModal data={modal.data} onClose={dismiss} />
+        <ProductionResultModal data={modal.data} onClose={() => dismiss(true)} />
       )}
       {modal.type === 'rankUp' && (
-        <RankUpModal data={modal.data} onClose={dismiss} />
+        <RankUpModal data={modal.data} onClose={() => dismiss(true)} />
       )}
       {modal.type === 'event' && (
-        <EventModal data={modal.data} onClose={dismiss} dispatch={dispatch} state={state} />
+        <EventModal data={modal.data} onClose={() => dismiss(true)} dispatch={dispatch} state={state} />
       )}
       {modal.type === 'generic' && (
-        <GenericModal data={modal.data} onClose={dismiss} />
+        <GenericModal data={modal.data} onClose={() => dismiss(true)} />
       )}
       {modal.type === 'audition' && (
-        <AuditionModal data={modal.data} onClose={dismiss} dispatch={dispatch} state={state} />
+        <AuditionModal data={modal.data} onClose={() => dismiss(true)} dispatch={dispatch} state={state} />
       )}
       {modal.type === 'actorQuitNotice' && (
-        <ActorQuitNoticeModal data={modal.data} onClose={dismiss} />
+        <ActorQuitNoticeModal data={modal.data} onClose={() => dismiss(true)} />
       )}
       {modal.type === 'actorBurnLetter' && (
-        <ActorBurnLetterModal data={modal.data} onClose={dismiss} />
+        <ActorBurnLetterModal data={modal.data} onClose={() => dismiss(true)} />
+      )}
+      {modal.type === 'weekSummary' && (
+        <WeekSummaryModal data={modal.data} onClose={() => dismiss(true)} />
       )}
     </div>
   )
+}
+
+function isDecisionModal(modal) {
+  if (!modal) return false
+  if (modal.type === 'audition') return true
+  return modal.type === 'event' && (modal.data?.choices?.length ?? 0) > 0
 }
 
 // ── Production Result — Four Critics ─────────────────────────────────────────
@@ -343,6 +357,89 @@ function GenericModal({ data, onClose }) {
       <button className="btn-primary" style={styles.closeBtn} onClick={onClose}>OK</button>
     </div>
   )
+}
+
+function WeekSummaryModal({ data, onClose }) {
+  const changes = data.changes ?? {}
+  return (
+    <div className="modal-box" style={{ maxHeight: '90dvh', overflowY: 'auto' }}>
+      <div className="modal-title">📋 WEEK {data.week} SUMMARY</div>
+      <div style={{ fontSize: 7, color: 'var(--lav)', lineHeight: 1.8, marginBottom: 12 }}>
+        Here is what changed before Week {data.nextWeek}. Production results, rewards, unlocks, and
+        scheduled activity are collected here in one place.
+      </div>
+
+      <div style={styles.summaryStats}>
+        <SummaryStat label="MONEY" value={signedMoney(changes.money)} color={changes.money >= 0 ? 'var(--green)' : 'var(--red)'} />
+        <SummaryStat label="REP" value={signedNumber(changes.reputation)} color={changes.reputation >= 0 ? 'var(--green)' : 'var(--red)'} />
+        <SummaryStat label="POP" value={signedNumber(changes.popularity)} color={changes.popularity >= 0 ? 'var(--blue)' : 'var(--red)'} />
+        <SummaryStat label="AWARDS" value={`+${changes.awards ?? 0}`} color="var(--gold)" />
+      </div>
+
+      <SummarySection title="🎬 PRODUCTIONS">
+        {data.completed?.length ? data.completed.map(item => (
+          <SummaryRow key={`done-${item.title}`} color="var(--green)">
+            <strong>{item.grade} · {item.title}</strong>
+            <span>Score {item.score} · {signedMoney(item.revenue)} · {signedNumber(item.popDelta)} pop</span>
+          </SummaryRow>
+        )) : <SummaryEmpty text="No production completed this week." />}
+        {data.wrapped?.map(title => <SummaryRow key={`wrap-${title}`} color="var(--gold)"><span>{title} wrapped filming.</span><span>Episodes begin releasing.</span></SummaryRow>)}
+        {data.releasedEpisodes?.map(item => <SummaryRow key={`ep-${item.title}-${item.episode}`} color="var(--pink)"><span>{item.title} · episode {item.episode} aired.</span><span>{item.rating != null ? `${item.rating}/10` : 'No rating'}</span></SummaryRow>)}
+      </SummarySection>
+
+      {data.actorRewards?.length > 0 && (
+        <SummarySection title="⭐ ACTOR REWARDS">
+          {data.actorRewards.flatMap(item => item.actors.map(actor => (
+            <SummaryRow key={`${item.title}-${actor.name}`} color="var(--lav)">
+              <span>{actor.name} · {item.title}</span>
+              <span>+{actor.xp} XP · +{actor.fame.toLocaleString()} fame</span>
+            </SummaryRow>
+          )))}
+        </SummarySection>
+      )}
+
+      {data.unlocks?.length > 0 && (
+        <SummarySection title="🔓 UNLOCKS">
+          {data.unlocks.map(unlock => (
+            <SummaryRow key={unlock.kind} color="var(--gold)">
+              <span>{unlock.kind}</span><span>{unlock.items.join(' · ')}</span>
+            </SummaryRow>
+          ))}
+        </SummarySection>
+      )}
+
+      <button className="btn-primary" style={styles.closeBtn} onClick={onClose}>▶ PLAN WEEK {data.nextWeek}</button>
+    </div>
+  )
+}
+
+function SummarySection({ title, children }) {
+  return (
+    <div style={styles.summarySection}>
+      <div style={styles.summarySectionTitle}>{title}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>{children}</div>
+    </div>
+  )
+}
+
+function SummaryRow({ color, children }) {
+  return <div style={{ ...styles.summaryRow, borderLeftColor: color }}>{children}</div>
+}
+
+function SummaryEmpty({ text }) {
+  return <div style={{ color: 'var(--gray)', fontSize: 7, padding: '4px 0' }}>{text}</div>
+}
+
+function SummaryStat({ label, value, color }) {
+  return <div style={styles.summaryStat}><span>{label}</span><strong style={{ color }}>{value}</strong></div>
+}
+
+function signedNumber(value = 0) {
+  return `${value >= 0 ? '+' : ''}${Number(value).toLocaleString()}`
+}
+
+function signedMoney(value = 0) {
+  return `${value >= 0 ? '+' : '−'}₩${Math.abs(Number(value)).toLocaleString()}`
 }
 
 // ── Audition ──────────────────────────────────────────────────────────────────
@@ -666,13 +763,42 @@ const styles = {
   },
   statsBar: {
     display:      'grid',
-    gridTemplateColumns: 'repeat(5, 1fr)',
+    gridTemplateColumns: 'repeat(6, 1fr)',
     gap:          8,
     textAlign:    'center',
     background:   'var(--bg-inset)',
     padding:      10,
     border:       '2px solid var(--shadow)',
     margin:       '12px 0 8px',
+  },
+  infoBadge: {
+    position: 'fixed', top: 12, left: 12, zIndex: 100001,
+    color: 'var(--blue)', fontSize: 6, padding: '4px 7px',
+    border: '1px solid var(--blue)', background: 'var(--bg-deep)',
+  },
+  decisionBadge: {
+    position: 'fixed', top: 12, left: 12, zIndex: 100001,
+    color: 'var(--gold)', fontSize: 6, padding: '4px 7px',
+    border: '1px solid var(--gold)', background: 'var(--bg-deep)',
+  },
+  summaryStats: {
+    display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6,
+    background: 'var(--bg-inset)', border: '2px solid var(--shadow)', padding: 8,
+    marginBottom: 10,
+  },
+  summaryStat: {
+    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+    minWidth: 0, fontSize: 5.5, color: 'var(--lav)',
+  },
+  summaryStatStrong: { fontSize: 8 },
+  summarySection: {
+    borderTop: '1px solid var(--shadow)', paddingTop: 8, marginTop: 8,
+  },
+  summarySectionTitle: { color: 'var(--pink)', fontSize: 7, marginBottom: 6, letterSpacing: 0.5 },
+  summaryRow: {
+    display: 'flex', justifyContent: 'space-between', gap: 8, padding: '5px 6px',
+    borderLeft: '3px solid', background: 'var(--bg-inset)', color: 'var(--white)',
+    fontSize: 6.5, lineHeight: 1.5,
   },
   detailRow: {
     fontSize: 7,

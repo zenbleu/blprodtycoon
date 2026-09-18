@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { id: 'freeagents', label: 'Free Agents',    icon: '🌟', shortLabel: 'POOL' },
   { id: 'company',    label: 'Company Status', icon: '🏢', shortLabel: 'CO'   },
   { id: 'guide',      label: 'Field Guide',    icon: '📖', shortLabel: 'GUIDE' },
+  { id: 'history',    label: 'Production History', icon: '📚', shortLabel: 'LOG' },
   { id: 'settings',   label: 'Settings',       icon: '⚙️', shortLabel: 'SET'  },
 ]
 

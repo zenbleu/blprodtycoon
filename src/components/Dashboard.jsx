@@ -164,6 +164,8 @@ export default function Dashboard({ setScreen }) {
         </div>
       </div>
 
+      {state.weekSummary && <WeekSummaryCard summary={state.weekSummary} />}
+
       {rosterAlerts.length > 0 && (
         <RosterAlertsPanel alerts={rosterAlerts} />
       )}
@@ -355,6 +357,43 @@ function EventLogPanel({ log }) {
   )
 }
 
+function WeekSummaryCard({ summary }) {
+  const changes = summary.changes ?? {}
+  return (
+    <div className="panel" style={styles.weekSummaryCard}>
+      <div style={styles.weekSummaryHeader}>
+        <div className="panel-title" style={{ margin: 0, border: 'none', padding: 0 }}>
+          📋 LAST WEEK · WEEK {summary.week}
+        </div>
+        <span style={{ fontSize: 6, color: 'var(--lav)' }}>reviewed</span>
+      </div>
+      <div style={styles.weekSummaryMetrics}>
+        <SummaryMetric label="MONEY" value={signedMoney(changes.money)} color={changes.money >= 0 ? 'var(--green)' : 'var(--red)'} />
+        <SummaryMetric label="REP" value={signed(changes.reputation)} color={changes.reputation >= 0 ? 'var(--green)' : 'var(--red)'} />
+        <SummaryMetric label="POP" value={signed(changes.popularity)} color={changes.popularity >= 0 ? 'var(--blue)' : 'var(--red)'} />
+        <SummaryMetric label="RELEASES" value={summary.completed?.length ?? 0} color="var(--pink)" />
+      </div>
+      <div style={{ fontSize: 7, color: 'var(--lav)', lineHeight: 1.8, marginTop: 8 }}>
+        {summary.completed?.length
+          ? summary.completed.map(item => `${item.grade} ${item.title}`).join(' · ')
+          : 'No production completed last week.'}
+      </div>
+    </div>
+  )
+}
+
+function SummaryMetric({ label, value, color }) {
+  return <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}><span style={{ fontSize: 5.5, color: 'var(--lav)' }}>{label}</span><strong style={{ fontSize: 8, color }}>{value}</strong></div>
+}
+
+function signed(value = 0) {
+  return `${value >= 0 ? '+' : ''}${Number(value).toLocaleString()}`
+}
+
+function signedMoney(value = 0) {
+  return `${value >= 0 ? '+' : '−'}₩${Math.abs(Number(value)).toLocaleString()}`
+}
+
 function BigStat({ label, value, color }) {
   return (
     <div style={styles.bigStat}>
@@ -382,4 +421,7 @@ const styles = {
   logScroll: { maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 },
   logEntry: { display: 'flex', gap: 8, alignItems: 'flex-start', padding: '4px 0', borderBottom: '1px solid var(--shadow)' },
   logWeek: { fontSize: 6, color: 'var(--gray)', flexShrink: 0, minWidth: 24 },
+  weekSummaryCard: { border: '2px solid var(--blue)', background: 'rgba(107,197,255,0.05)' },
+  weekSummaryHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  weekSummaryMetrics: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginTop: 10, padding: 8, background: 'var(--bg-inset)' },
 }

@@ -20,6 +20,7 @@ export const A = {
   RESOLVE_EVENT: 'RESOLVE_EVENT', PUSH_EVENT_LOG: 'PUSH_EVENT_LOG', ADD_FIXED_CP: 'ADD_FIXED_CP',
   REMOVE_FIXED_CP: 'REMOVE_FIXED_CP', GRADUATE_FIXED_CP: 'GRADUATE_FIXED_CP', UPDATE_RIVALS: 'UPDATE_RIVALS', BULK_SIGN: 'BULK_SIGN',
   SET_COMPANY_NAME: 'SET_COMPANY_NAME', SET_SETTINGS: 'SET_SETTINGS', SET_FLAG: 'SET_FLAG',
+  SET_WEEK_SUMMARY: 'SET_WEEK_SUMMARY', SET_SAVE_STATUS: 'SET_SAVE_STATUS',
   LOAD_SAVE: 'LOAD_SAVE', MARK_SAVED: 'MARK_SAVED', ADD_FREE_AGENT: 'ADD_FREE_AGENT',
   REMOVE_FREE_AGENT: 'REMOVE_FREE_AGENT', UPDATE_FREE_AGENT: 'UPDATE_FREE_AGENT',
   INIT_FREE_AGENTS: 'INIT_FREE_AGENTS', UNLOCK_GENRES: 'UNLOCK_GENRES', DISCOVER_GENRE: 'DISCOVER_GENRE',
@@ -102,6 +103,8 @@ export function gameReducer(state, action) {
       return { ...migrated, rivals: migrated.rivals?.length ? migrated.rivals : generateRivals() }
     }
     case A.MARK_SAVED: return { ...state, lastSaved: action.ts }
+    case A.SET_WEEK_SUMMARY: return { ...state, weekSummary: action.summary }
+    case A.SET_SAVE_STATUS: return { ...state, saveStatus: action.status, saveError: action.error ?? null }
     case A.INCREMENT_GRADE_COUNT: return { ...state, gradeCounts: { ...(state.gradeCounts ?? {}), [action.grade]: ((state.gradeCounts ?? {})[action.grade] ?? 0) + 1 } }
     case A.SET_FIXED_CP_NAME: return { ...state, fixedCPNames: { ...(state.fixedCPNames ?? {}), [action.key]: action.name } }
     case A.SET_GENRE_TRENDS: return { ...state, genreTrends: action.trends }
