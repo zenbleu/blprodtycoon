@@ -1,0 +1,205 @@
+Convert the existing BL Production Tycoon project into a standalone Windows `.exe` desktop application with offline gameplay and online-only updating.
+
+Do not change gameplay mechanics or the existing four gameplay phases. Preserve the current React/Vite game exactly as the gameplay source.
+
+### Required behavior
+
+**1. Standalone offline application**
+
+* Package the current game into a Windows desktop application.
+* After installation/extraction, the game must be completely playable with **no internet connection**.
+* All required HTML, JavaScript, CSS, fonts, images, portraits, audio, and other game assets must be bundled locally.
+* The installed application must not depend on GitHub Pages for normal gameplay.
+* Existing localStorage/save/import/export behavior must continue working.
+* Do not convert the game into an online-only wrapper around the GitHub Pages site.
+
+**2. Online update system**
+The application should check for updates when launched.
+
+The update source should be based on the committed/pushed GitHub codebase and its generated Windows build. Design this so that future commits pushed to the repository can produce a new Windows build/update package through GitHub Actions.
+
+Do not download the entire application repeatedly when only checking for updates. Use a version/build identifier and update manifest so the application can determine whether a newer build exists.
+
+Update checking must fail gracefully:
+
+* No internet → launch and play normally.
+* GitHub/update server unavailable → launch and play normally.
+* No update → show no update UI.
+* New update available → show the update UI.
+
+**3. Launch/update UI**
+When the application launches, perform the update check while the normal loading screen is displayed.
+
+If no update exists, the update UI should remain hidden.
+
+If an update is available, display a compact update panel/modal in the lower-right area of the loading screen and keep it available through the transition into the main game until the player resolves it.
+
+Use messaging similar to:
+
+"The game is updating..."
+
+During download, display a **real download percentage based on actual downloaded bytes**, not a fake timer or simulated percentage.
+
+Once the update package has finished downloading, change the message to something similar to:
+
+"A new update is ready."
+
+Provide:
+
+* **Update Now**
+* **Later**
+
+`Update Now` should initiate the desktop application's update/replacement process automatically.
+
+`Later` should close the panel and allow the player to continue playing.
+
+Do not block normal gameplay merely because an update is available.
+
+**4. Settings update control**
+Add an update section/action to the existing Settings screen.
+
+It should allow the player to:
+
+* check for updates,
+* see the currently installed version,
+* see whether an update is available,
+* download/install an available update,
+* see download progress when an update is being downloaded.
+
+If the player previously selected `Later`, they must still be able to update from Settings.
+
+**5. Actual application updating**
+The updater must replace/update the installed desktop application itself.
+
+Do not implement the update as:
+
+* refreshing GitHub Pages,
+* downloading HTML into the app,
+* changing an iframe/webview URL,
+* or simply clearing browser cache.
+
+The updated executable/application must contain the new committed code and assets.
+
+Use a proper Windows desktop auto-update architecture appropriate for the chosen packaging technology.
+
+If the selected desktop framework requires a separate updater process/helper because the running `.exe` cannot replace itself, implement that correctly.
+
+The game should close/restart automatically as necessary during `Update Now`, then reopen into the newly updated version.
+
+**6. GitHub Actions**
+Create/update the GitHub Actions workflow required to build the Windows application.
+
+The workflow must:
+
+* install dependencies using the project's existing pnpm setup,
+* build the Vite application,
+* package the Windows desktop application,
+* generate the update metadata required by the updater,
+* produce a downloadable Windows artifact.
+
+The primary downloadable artifact must be a `.zip`.
+
+When I download and extract that artifact, I expect:
+
+`BL-Production-Tycoon.exe`
+
+and **nothing else**.
+
+The ZIP must therefore contain exactly one `.exe` file at its root.
+
+If the updater requires supporting files internally, they must be packaged inside the executable/application format rather than exposed as additional files in the delivered ZIP.
+
+Do not place source code, `node_modules`, build folders, manifests, DLLs, installer files, documentation, or unrelated artifacts beside the `.exe` in the final downloadable ZIP.
+
+**7. Initial release vs future updates**
+The first Windows artifact will be downloaded manually once, extracted, and used as the initial installed application.
+
+After that, future repository changes should follow this flow:
+
+Replit changes code/assets
+↓
+Commit + push to GitHub
+↓
+GitHub Actions creates the new Windows build/update release
+↓
+Installed `.exe` detects the newer version online
+↓
+Player sees the update UI
+↓
+Actual download progress is shown
+↓
+Player chooses Update Now or Later
+↓
+Update Now replaces/restarts the application
+↓
+New version runs offline
+
+Do not require the player to manually download another ZIP for normal updates.
+
+**8. Versioning**
+Implement a reliable application version/build identifier.
+
+The updater must compare the installed version against the latest published version.
+
+Do not use timestamps alone as the only update mechanism.
+
+Make the version visible in Settings/About.
+
+Ensure every GitHub Actions build produces update metadata that the installed application can understand.
+
+**9. GitHub Pages compatibility**
+Keep the existing GitHub Pages deployment working.
+
+The desktop build and GitHub Pages build should use the same underlying game source.
+
+Do not break the currently working asset paths or the existing GitHub Pages deployment while introducing the Windows build.
+
+The desktop application's local asset loading must work independently from the GitHub Pages base path.
+
+**10. Save compatibility**
+Existing saves must remain compatible with the desktop version.
+
+The updater must never delete or reset player saves.
+
+Keep the existing save schema/migration system intact.
+
+### Technical direction
+
+Inspect the existing project and choose the most appropriate Windows desktop packaging/update technology for this React/Vite application.
+
+Prefer a lightweight solution appropriate for a game that is primarily a client-side React application.
+
+The final architecture should clearly separate:
+
+* local bundled game runtime,
+* Windows desktop shell,
+* update checker,
+* update downloader,
+* update installer/relauncher,
+* GitHub-hosted release/update metadata.
+
+Avoid introducing a server/backend for gameplay.
+
+Do not hardcode a temporary development URL or local machine path.
+
+Use the repository's actual GitHub owner/repository information already present in the project.
+
+### Important constraint
+
+Do not rewrite or redesign the game.
+
+This task is specifically to add:
+
+**Windows standalone packaging + offline runtime + online update infrastructure + GitHub Actions artifact/release workflow + launch/settings update UI.**
+
+Preserve all existing gameplay, saves, UI, assets, and current GitHub Pages deployment unless a change is technically required for desktop packaging.
+
+At the end, provide a concise implementation summary explaining:
+
+* which desktop technology was selected and why,
+* how offline runtime works,
+* where update metadata/packages are hosted,
+* how the running application updates itself,
+* how GitHub Actions publishes the update,
+* what the final downloadable ZIP contains,
+* and the exact steps I should use to perform the first installation and test a future update.
