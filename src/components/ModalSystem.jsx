@@ -12,8 +12,9 @@ import { ActorPortrait } from './ActorRoster.jsx'
 
 export default function ModalSystem() {
   const { state, dispatch } = useGame()
-  const [modal] = state.modalQueue
-  const queueLen  = state.modalQueue.length
+  const modalQueue = state.modalQueue ?? []
+  const [modal] = modalQueue
+  const queueLen  = modalQueue.length
   const prevModal = useRef(null)
   const dialogRef = useRef(null)
   const restoreFocusRef = useRef(null)

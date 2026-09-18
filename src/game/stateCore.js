@@ -43,7 +43,11 @@ export function gameReducer(state, action) {
     case A.SET_NUMERIC_RANK: return { ...state, numericRank: action.rank }
     case A.ADD_AWARD: return { ...state, awards: state.awards + (action.amount ?? 1) }
     case A.INCREMENT_PRODS_COMPLETED: return { ...state, productionsCompleted: (state.productionsCompleted ?? 0) + (action.count ?? 1) }
-    case A.UNLOCK_TIER: if (state.unlockedTiers.includes(action.tier)) return state; return { ...state, unlockedTiers: [...state.unlockedTiers, action.tier] }
+  case A.UNLOCK_TIER: {
+    const unlockedTiers = state.unlockedTiers ?? ['Rookie']
+    if (unlockedTiers.includes(action.tier)) return state
+    return { ...state, unlockedTiers: [...unlockedTiers, action.tier] }
+  }
     case A.UNLOCK_GENRES: {
       const currentGenres = state.unlockedGenres ?? ['Romance', 'School', 'Office']
       const currentMilestones = state.unlockedMilestones ?? currentGenres
@@ -72,12 +76,12 @@ export function gameReducer(state, action) {
     case A.ADD_PRODUCTION: return { ...state, productions: [...state.productions, action.production] }
     case A.UPDATE_PRODUCTION: return { ...state, productions: state.productions.map(p => p.id === action.id ? { ...p, ...action.patch } : p) }
     case A.COMPLETE_PRODUCTION: return { ...state, productions: state.productions.filter(p => p.id !== action.id), history: [...state.history, action.record] }
-    case A.PUSH_MODAL: return { ...state, modalQueue: [...state.modalQueue, action.modal] }
-    case A.POP_MODAL: return { ...state, modalQueue: state.modalQueue.slice(1) }
-    case A.PUSH_TOAST: return { ...state, toasts: [...state.toasts.slice(-4), { id: Date.now() + Math.random(), ...action.toast }] }
-    case A.DISMISS_TOAST: return { ...state, toasts: state.toasts.filter(t => t.id !== action.id) }
-    case A.PUSH_EVENT: return { ...state, events: [...state.events, action.event] }
-    case A.RESOLVE_EVENT: return { ...state, events: state.events.filter(e => e.id !== action.id) }
+  case A.PUSH_MODAL: return { ...state, modalQueue: [...(state.modalQueue ?? []), action.modal] }
+  case A.POP_MODAL: return { ...state, modalQueue: (state.modalQueue ?? []).slice(1) }
+  case A.PUSH_TOAST: return { ...state, toasts: [...(state.toasts ?? []).slice(-4), { id: Date.now() + Math.random(), ...action.toast }] }
+  case A.DISMISS_TOAST: return { ...state, toasts: (state.toasts ?? []).filter(t => t.id !== action.id) }
+  case A.PUSH_EVENT: return { ...state, events: [...(state.events ?? []), action.event] }
+  case A.RESOLVE_EVENT: return { ...state, events: (state.events ?? []).filter(e => e.id !== action.id) }
     case A.PUSH_EVENT_LOG: return { ...state, eventLog: [action.entry, ...(state.eventLog ?? [])].slice(0, 80) }
     case A.ADD_FIXED_CP: { const [x, y] = action.pair; const without = (state.fixedCPs ?? []).filter(([a, b]) => a !== x && b !== x && a !== y && b !== y); if (without.some(([a, b]) => (a === x && b === y) || (a === y && b === x))) return state; return { ...state, fixedCPs: [...without, [x, y]] } }
     case A.REMOVE_FIXED_CP: { const [x, y] = action.pair; return { ...state, fixedCPs: (state.fixedCPs ?? []).filter(([a, b]) => !((a === x && b === y) || (a === y && b === x))) } }

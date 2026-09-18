@@ -37,7 +37,9 @@ export default function Sidebar({ currentScreen, setScreen }) {
       return
     }
     autoTimerRef.current = setTimeout(() => {
-      advanceWeek()
+      advanceWeek().then(success => {
+        if (success === false) setAutoAdvance(false)
+      })
     }, 400)
     return () => clearTimeout(autoTimerRef.current)
   }, [autoAdvance, advancing, state.modalQueue?.length, state.week])

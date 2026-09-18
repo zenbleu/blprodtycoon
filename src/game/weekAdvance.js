@@ -34,6 +34,7 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
     const week = state.week
     // Prompt 1: tier now derived from numeric rank, not week
     const tier = getGameTierByRank(state.numericRank ?? 101)
+    const unlockedTiers = Array.isArray(state.unlockedTiers) ? state.unlockedTiers : ['Rookie']
 
     // ── Genre trends: regenerate at start of each year (or first week ever) ──
     const weekInYear = ((week - 1) % 52) + 1
@@ -691,7 +692,7 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
 
     // Prompt 2: auto-sign actors on tier unlock (free, no modal "pay to sign")
     function autoSignTier(tierName, emoji, rankNum) {
-      if (!state.unlockedTiers.includes(tierName)) {
+      if (!unlockedTiers.includes(tierName)) {
         dispatch({ type: A.UNLOCK_TIER, tier: tierName })
         // Find all actors of this tier not yet signed and auto-sign them for free
         const newActors = state.actors.filter(a => a.tier === tierName && !a.signed)
@@ -793,7 +794,7 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
     // ── 5.7 Audition week (every 4 weeks) ────────────────────────────────────
     if (week > 0 && week % 4 === 0) {
       const unsigned = state.actors.filter(
-        a => !a.signed && state.unlockedTiers.includes(a.tier)
+        a => !a.signed && unlockedTiers.includes(a.tier)
       )
       if (unsigned.length > 0) {
         const shuffled   = [...unsigned].sort(() => Math.random() - 0.5)

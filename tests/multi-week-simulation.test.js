@@ -308,3 +308,22 @@ test('multi-week simulation save data round-trips and legacy migration remains v
   assert.ok(Object.keys(PROD_TYPES).length >= 3)
   assert.ok(SCHEDULES.some(schedule => schedule.weeks === 12))
 })
+
+test('legacy saves can advance after runtime collections were introduced', async () => {
+  const rng = seededRandom(SEED)
+  const legacyState = makeSimulationState(rng)
+  delete legacyState.unlockedTiers
+  delete legacyState.modalQueue
+  delete legacyState.events
+  delete legacyState.flags
+
+  const restored = migrateSaveData(legacyState)
+  const stateRef = { value: restored }
+  await advanceWeekPipeline({ state: stateRef.value, dispatch: dispatchFor(stateRef), rng })
+
+  assert.equal(stateRef.value.week, 2)
+  assert.ok(stateRef.value.unlockedTiers.includes('Rookie'))
+  assert.ok(Array.isArray(stateRef.value.modalQueue))
+  assert.ok(Array.isArray(stateRef.value.events))
+  assert.deepEqual(stateRef.value.flags, {})
+})
