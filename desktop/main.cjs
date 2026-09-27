@@ -10,6 +10,7 @@ const APP_NAME = 'BL Production Tycoon'
 const REPOSITORY = process.env.BL_TYCOON_UPDATE_REPO || 'zenbleu/blprodtycoon'
 const MANIFEST_URL = `https://github.com/${REPOSITORY}/releases/download/desktop-latest/latest.json`
 const UPDATE_FILE_NAME = 'BL-Production-Tycoon-update.exe'
+const UPDATE_META_NAME = 'BL-Production-Tycoon-update.json'
 
 let mainWindow
 let updateManifest = null
@@ -41,6 +42,33 @@ function createMainWindow() {
 function sendProgress(progress) {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('update-progress', progress)
+  }
+}
+
+function getUpdatePath(fileName) {
+  return path.join(app.getPath('temp'), fileName)
+}
+
+async function clearStagedUpdate() {
+  await Promise.all([
+    fsp.rm(getUpdatePath(UPDATE_FILE_NAME), { force: true }),
+    fsp.rm(getUpdatePath(UPDATE_META_NAME), { force: true }),
+  ])
+}
+
+async function findStagedUpdate(manifest) {
+  const destination = getUpdatePath(UPDATE_FILE_NAME)
+  const metadataPath = getUpdatePath(UPDATE_META_NAME)
+  try {
+    const metadata = JSON.parse(await fsp.readFile(metadataPath, 'utf8'))
+    const fileStats = await fsp.stat(destination)
+    const sameVersion = metadata.version === manifest.version
+    const sameHash = !manifest.sha256
+      || String(metadata.sha256).toLowerCase() === String(manifest.sha256).toLowerCase()
+    const sameSize = !Number(manifest.size) || fileStats.size === Number(manifest.size)
+    return sameVersion && sameHash && sameSize ? destination : null
+  } catch {
+    return null
   }
 }
 
@@ -110,8 +138,15 @@ async function checkForUpdates() {
     }
     updateManifest = manifest
     const available = compareVersions(manifest.version, installedVersion) > 0
+    if (available) {
+      downloadedUpdate = await findStagedUpdate(manifest)
+      if (!downloadedUpdate) await clearStagedUpdate()
+    } else {
+      downloadedUpdate = null
+      await clearStagedUpdate()
+    }
     return {
-      status: available ? 'available' : 'current',
+      status: downloadedUpdate ? 'ready' : available ? 'available' : 'current',
       installedVersion,
       latestVersion: manifest.version,
       releaseNotes: manifest.releaseNotes || '',
@@ -174,8 +209,8 @@ function downloadFile(url, destination, expectedSize, redirectCount = 0) {
 
 async function downloadUpdate() {
   if (!updateManifest) throw new Error('Check for updates before downloading')
-  const destination = path.join(app.getPath('temp'), UPDATE_FILE_NAME)
-  await fsp.rm(destination, { force: true })
+  const destination = getUpdatePath(UPDATE_FILE_NAME)
+  await clearStagedUpdate()
   sendProgress({ received: 0, total: Number(updateManifest.size) || 0, percent: 0 })
   await downloadFile(updateManifest.downloadUrl, destination, Number(updateManifest.size) || 0)
 
@@ -184,9 +219,14 @@ async function downloadUpdate() {
   for await (const chunk of stream) hash.update(chunk)
   const sha256 = hash.digest('hex')
   if (updateManifest.sha256 && sha256.toLowerCase() !== String(updateManifest.sha256).toLowerCase()) {
-    await fsp.rm(destination, { force: true })
+    await clearStagedUpdate()
     throw new Error('Downloaded update checksum did not match')
   }
+  await fsp.writeFile(getUpdatePath(UPDATE_META_NAME), JSON.stringify({
+    version: updateManifest.version,
+    size: Number(updateManifest.size) || 0,
+    sha256,
+  }))
   downloadedUpdate = destination
   sendProgress({ received: Number(updateManifest.size) || 0, total: Number(updateManifest.size) || 0, percent: 100 })
   return { status: 'ready', version: updateManifest.version }
@@ -201,16 +241,43 @@ function installUpdate() {
   }
 
   const target = app.getPath('exe')
+  const installerLog = path.join(app.getPath('temp'), 'BL-Production-Tycoon-update.log')
+  const metadataPath = getUpdatePath(UPDATE_META_NAME)
   const script = [
+    '$ErrorActionPreference = "Stop"',
     `$pidToWait = ${process.pid}`,
     `$source = '${downloadedUpdate.replace(/'/g, "''")}'`,
     `$target = '${target.replace(/'/g, "''")}'`,
+    `$log = '${installerLog.replace(/'/g, "''")}'`,
+    `$metadata = '${metadataPath.replace(/'/g, "''")}'`,
+    '$backup = "$target.previous"',
+    '$success = $false',
+    '$lastError = ""',
     'while (Get-Process -Id $pidToWait -ErrorAction SilentlyContinue) { Start-Sleep -Milliseconds 250 }',
-    'for ($attempt = 0; $attempt -lt 40; $attempt++) {',
-    '  try { Move-Item -LiteralPath $source -Destination $target -Force; break }',
-    '  catch { Start-Sleep -Milliseconds 250 }',
+    'for ($attempt = 0; $attempt -lt 120; $attempt++) {',
+    '  try {',
+    '    if (-not (Test-Path -LiteralPath $source)) { throw "Downloaded update was not found." }',
+    '    if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Force -ErrorAction SilentlyContinue }',
+    '    Move-Item -LiteralPath $target -Destination $backup -Force',
+    '    Move-Item -LiteralPath $source -Destination $target -Force',
+    '    $success = $true',
+    '    break',
+    '  } catch {',
+    '    $lastError = $_.Exception.Message',
+    '    if ((Test-Path -LiteralPath $backup) -and -not (Test-Path -LiteralPath $target)) {',
+    '      Move-Item -LiteralPath $backup -Destination $target -Force -ErrorAction SilentlyContinue',
+    '    }',
+    '    Start-Sleep -Milliseconds 500',
+    '  }',
     '}',
-    'Start-Process -FilePath $target',
+    'if (-not $success) {',
+    '  Add-Content -LiteralPath $log -Value "$(Get-Date -Format o) Update install failed: $lastError"',
+    '  exit 1',
+    '}',
+    'Remove-Item -LiteralPath $backup -Force -ErrorAction SilentlyContinue',
+    'Remove-Item -LiteralPath $metadata -Force -ErrorAction SilentlyContinue',
+    'Remove-Item -LiteralPath $log -Force -ErrorAction SilentlyContinue',
+    'Start-Process -FilePath $target -WorkingDirectory (Split-Path -Parent $target)',
   ].join('\n')
   const encoded = Buffer.from(script, 'utf16le').toString('base64')
   const child = spawn('powershell.exe', [
@@ -222,7 +289,9 @@ function installUpdate() {
     encoded,
   ], { detached: true, stdio: 'ignore', windowsHide: true })
   child.unref()
-  setTimeout(() => app.quit(), 100)
+  // Exit immediately so Windows can release the executable before the
+  // detached installer tries to rename it.
+  setTimeout(() => app.exit(0), 100)
   return { status: 'installing' }
 }
 
