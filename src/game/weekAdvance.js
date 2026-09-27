@@ -219,6 +219,7 @@ export async function advanceWeekPipeline({ state, dispatch, rng = Math.random }
           chemistry_map:  newChemMap,
           status:         'available',
           assignedTo:     null,
+          idleWeeks:      0,
           completedProds: (actor.completedProds ?? 0) + 1,
           fame:           (actor.fame ?? 0) + (evalResult.famePerActor ?? 0),
         }

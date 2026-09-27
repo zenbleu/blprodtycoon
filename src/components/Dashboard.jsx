@@ -8,55 +8,8 @@ import { useGame } from '../game/state.jsx'
 import { fmtMoney, fmtPop, calcRank, rankProgress } from '../game/ranking.js'
 import { PROD_TYPES, SCHEDULES, PLATFORMS, scoreToStars } from '../game/productions.js'
 import { ActorPortrait } from './ActorRoster.jsx'
-import { actorDisplayName } from '../game/actors.js'
+import { buildRosterAlerts } from '../game/rosterAlerts.js'
 import { SFX } from '../game/audio.js'
-
-// ── Roster alert helpers ──────────────────────────────────────────────────────
-function loyaltyLabel(loyalty) {
-  if (loyalty > 75) return 'High'
-  if (loyalty > 50) return 'Moderate'
-  if (loyalty > 25) return 'Low'
-  if (loyalty > 10) return 'Critical'
-  return 'LEAVING!'
-}
-
-function buildRosterAlerts(actors) {
-  const alerts = []
-  for (const a of actors) {
-    if (!a.signed || a.status !== 'available') continue
-    const h    = a.happiness ?? 70
-    const l    = a.loyalty   ?? 60
-    const idle = a.idleWeeks ?? 0
-    const name = actorDisplayName(a)
-    const loyLvl = loyaltyLabel(l)
-    let severity = 0, message = '', color = 'var(--gold)'
-
-    // Emergency warning at ≤10 Loyalty — always shown for available actors
-    if (l <= 10) {
-      severity = 4
-      message  = `‼️ FINAL WARNING‼️: ${name} is walking out! 🤬 (Loyalty: ${loyLvl}) ⚠️`
-      color    = 'var(--red)'
-    } else if (idle >= 1 && h < 25) {
-      // Angry (0–24) AND actually been idle at least 1 week
-      severity = 3
-      message  = `❗ROSTER IDLE❗ ${name} is angry after ${idle} week${idle !== 1 ? 's' : ''} with no work! 😢 Cast them before they quit! (Loyalty: ${loyLvl}) 📢`
-      color    = '#FF5470'
-    } else if (idle >= 1 && h < 50) {
-      // Sad (25–49) AND actually been idle at least 1 week
-      severity = 2
-      message  = `${name} feels forgotten after ${idle} week${idle !== 1 ? 's' : ''}! 😠 Keep them acting or loyalty will drop! (Loyalty: ${loyLvl}) 📉`
-      color    = '#FF9F68'
-    } else if (idle >= 1 && h < 75) {
-      // Neutral (50–74) AND actually been idle at least 1 week
-      severity = 1
-      message  = `Roster idle: Keep ${name} acting! 😐 It has been ${idle} week${idle !== 1 ? 's' : ''}. (Loyalty: ${loyLvl}) ⏳`
-      color    = 'var(--gold)'
-    }
-
-    if (severity > 0) alerts.push({ actor: a, severity, message, color })
-  }
-  return alerts.sort((x, y) => y.severity - x.severity)
-}
 
 function RosterAlertsPanel({ alerts }) {
   const [expanded, setExpanded] = useState(false)

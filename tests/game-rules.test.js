@@ -10,6 +10,7 @@ import { buildBalanceReport } from '../src/game/debug.js'
 import { isSaveData, migrateSaveData, SAVE_SCHEMA_VERSION } from '../src/game/save.js'
 import { evaluateProduction } from '../src/game/evaluators.js'
 import { A, gameReducer } from '../src/game/stateCore.js'
+import { buildRosterAlerts } from '../src/game/rosterAlerts.js'
 
 const fixedRandom = value => () => value
 
@@ -214,4 +215,20 @@ test('promotion requirements remain gated until all criteria are met', () => {
   const result = checkTierPromotion(actor, [])
   assert.equal(result.eligible, false)
   assert.ok(result.unmet.length > 0)
+})
+
+test('roster alerts only appear once loyalty reaches the low band', () => {
+  const baseActor = {
+    id: 1,
+    name: 'Aiden',
+    signed: true,
+    status: 'available',
+    happiness: 60,
+    idleWeeks: 1,
+  }
+
+  assert.deepEqual(buildRosterAlerts([{ ...baseActor, loyalty: 78 }]), [])
+  assert.deepEqual(buildRosterAlerts([{ ...baseActor, loyalty: 51 }]), [])
+  assert.equal(buildRosterAlerts([{ ...baseActor, loyalty: 50 }]).length, 1)
+  assert.equal(buildRosterAlerts([{ ...baseActor, loyalty: 10, idleWeeks: 0 }])[0].severity, 4)
 })
