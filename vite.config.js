@@ -6,7 +6,7 @@ import path from 'node:path'
 // the repository path for Pages; local previews keep the relative default.
 export default defineConfig({
   plugins: [react()],
-  base: process.env.VITE_BASE_PATH || './',
+  base: process.env.VITE_BASE_PATH || '/',
   resolve: {
     alias: {
       '@': path.resolve(process.cwd(), './src'),
@@ -21,12 +21,12 @@ export default defineConfig({
   },
   server: {
     host: '0.0.0.0',
-    port: 5000,
-    allowedHosts: true,
+    port: 3000,
+    allowedHosts: 'all',
   },
   preview: {
     host: '0.0.0.0',
-    port: 5000,
+    port: 3000,
     allowedHosts: 'all',
   },
 })

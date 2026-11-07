@@ -41,8 +41,8 @@ const MESSAGES = [
   '✨ Almost ready, Producer...',
 ]
 
-// Loading duration in ms — intentionally long for atmosphere
-const LOAD_DURATION = 30000
+// Loading duration in ms — fast and snappy
+const LOAD_DURATION = 1800
 
 // ── Ambient canvas: petals + sparkles ─────────────────────────────────────────
 function useAmbientCanvas(canvasRef, reducedMotion) {
@@ -191,6 +191,7 @@ export default function LoadingScreen({ onComplete }) {
   const [msgVisible, setMsgVisible] = useState(true)
   const [phase,      setPhase]      = useState('loading')
   const canvasRef    = useRef(null)
+  const finishedRef  = useRef(false)
   // Keep a ref to onComplete so the timer effect never re-runs when App re-renders
   const onCompleteRef = useRef(onComplete)
   useEffect(() => { onCompleteRef.current = onComplete }, [onComplete])
@@ -201,46 +202,57 @@ export default function LoadingScreen({ onComplete }) {
 
   useAmbientCanvas(canvasRef, reducedMotion)
 
+  const finishEarly = useCallback(() => {
+    if (finishedRef.current) return
+    finishedRef.current = true
+    setProgress(100)
+    setPhase('exit')
+    setTimeout(() => {
+      onCompleteRef.current?.()
+    }, 250)
+  }, [])
+
   // ── Skip instantly for reduced-motion users ──
   useEffect(() => {
     if (!reducedMotion) return
-    const t = setTimeout(() => onCompleteRef.current?.(), 300)
+    const t = setTimeout(() => finishEarly(), 200)
     return () => clearTimeout(t)
-  }, [reducedMotion])
+  }, [reducedMotion, finishEarly])
 
-  // ── Progress timer — Date.now() + setInterval, reliable in browsers ──────────
+  // ── Progress timer — fast and smooth ──────────
   useEffect(() => {
     if (reducedMotion) return
 
     const startMs  = Date.now()
-    // Tick every 250ms — smooth enough, low overhead
-    const TICK_MS  = 250
+    const TICK_MS  = 35
 
     const id = setInterval(() => {
       const elapsed = Date.now() - startMs
       const t = Math.min(elapsed / LOAD_DURATION, 1)
 
-      // Ease: crawls through first 70%, then finishes
-      const eased = t < 0.7
-        ? 0.5 * Math.pow(t / 0.7, 1.8)
-        : 0.5 + 0.5 * Math.pow((t - 0.7) / 0.3, 0.65)
+      // Smooth ease-out curve
+      const eased = t < 0.6
+        ? 0.65 * (t / 0.6)
+        : 0.65 + 0.35 * Math.pow((t - 0.6) / 0.4, 0.8)
 
       const p = Math.min(Math.floor(eased * 100), 100)
       setProgress(p)
 
       if (t >= 1) {
         clearInterval(id)
+        if (finishedRef.current) return
+        finishedRef.current = true
         setProgress(100)
         setPhase('complete')
         setTimeout(() => {
           setPhase('exit')
-          setTimeout(() => onCompleteRef.current?.(), 650)
-        }, 800)
+          setTimeout(() => onCompleteRef.current?.(), 300)
+        }, 350)
       }
     }, TICK_MS)
 
     return () => clearInterval(id)
-  }, [reducedMotion]) // stable — no onComplete dependency
+  }, [reducedMotion])
 
   // ── Rotating messages ──
   useEffect(() => {
@@ -250,15 +262,16 @@ export default function LoadingScreen({ onComplete }) {
       setTimeout(() => {
         setMsgIndex(i => (i + 1) % MESSAGES.length)
         setMsgVisible(true)
-      }, 380)
-    }, 3600)
+      }, 150)
+    }, 700)
     return () => clearInterval(id)
   }, [reducedMotion])
 
   return (
     <div
       className={`ls-root${phase === 'exit' ? ' ls-exit' : ''}`}
-      aria-label="Loading BL Production Tycoon"
+      onClick={finishEarly}
+      aria-label="Loading BL Production Tycoon (Click anywhere or click SKIP to continue)"
       aria-live="polite"
     >
       {/* Background image — random, chosen once per session */}
@@ -310,6 +323,18 @@ export default function LoadingScreen({ onComplete }) {
           <div className="ls-bar-label">
             {progress < 100 ? `Loading Assets...  ${progress}%` : '✨  Ready, Producer!'}
           </div>
+
+          <button
+            type="button"
+            className="ls-skip-btn"
+            onClick={(e) => {
+              e.stopPropagation()
+              finishEarly()
+            }}
+            aria-label="Skip loading"
+          >
+            SKIP ⏩
+          </button>
         </div>
       </div>
     </div>

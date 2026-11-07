@@ -180,6 +180,35 @@
   text-shadow: 0 0 8px rgba(255, 107, 157, 0.65);
 }
 
+/* Skip button */
+.ls-skip-btn {
+  margin-top: 6px;
+  background: rgba(31, 19, 56, 0.85);
+  border: 2px solid #FF6B9D;
+  box-shadow: 0 3px 0 #8A2B52;
+  color: #FFD700;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  padding: 6px 14px;
+  cursor: pointer;
+  border-radius: 4px;
+  letter-spacing: 1px;
+  transition: transform 0.1s ease, background 0.12s ease, box-shadow 0.12s ease;
+  min-height: 28px;
+  text-align: center;
+}
+
+.ls-skip-btn:hover {
+  background: #FF6B9D;
+  color: #120A24;
+  border-color: #FFD700;
+}
+
+.ls-skip-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #8A2B52;
+}
+
 /* ── Reduced motion ─────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .ls-bar-fill,
